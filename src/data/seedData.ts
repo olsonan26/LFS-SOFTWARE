@@ -1,0 +1,653 @@
+/**
+ * @license
+ * Lettrology Forensic Science - Comprehensive Canonical Seed Data
+ */
+
+import {
+  CaseRecord,
+  PersonRecord,
+  EventRecord,
+  EvidenceRecord,
+  HypothesisRecord,
+  BlindExperiment,
+  UserProfile,
+  DocumentRecord,
+  MediaRecord,
+} from '../types.ts';
+import { CURRENT_ENGINE_VERSION } from '../core/lettrology-engine/methodologyVersion.ts';
+
+export const SEED_USERS: UserProfile[] = [
+  {
+    userId: 'user-alex',
+    name: 'Alex Olson',
+    email: 'Olsonan24@gmail.com',
+    role: 'Alex – System Owner / Research Director',
+    trainingLevel: 'CERTIFIED_PRACTITIONER',
+  },
+  {
+    userId: 'user-peter',
+    name: 'Peter Vaughan',
+    email: 'peter.vaughan@lettrology.org',
+    role: 'Peter – Methodology Authority',
+    trainingLevel: 'CERTIFIED_PRACTITIONER',
+  },
+  {
+    userId: 'user-inv1',
+    name: 'Insp. Sarah Vance',
+    email: 's.vance@forensic.int',
+    role: 'Lead Investigator / Advanced Practitioner',
+    trainingLevel: 'ADVANCED',
+  },
+  {
+    userId: 'user-res1',
+    name: 'Dr. David Chen',
+    email: 'd.chen@criminology.edu',
+    role: 'Researcher',
+    trainingLevel: 'ADVANCED',
+  },
+  {
+    userId: 'user-stu1',
+    name: 'Marcus Brody',
+    email: 'm.brody@academy.org',
+    role: 'Student',
+    trainingLevel: 'BASIC',
+  },
+];
+
+export const SEED_PEOPLE: PersonRecord[] = [
+  // 1. Elon Musk (PRD Section 43 acceptance benchmark)
+  {
+    personId: 'person-elon',
+    displayName: 'Elon Musk',
+    verifiedBirthName: 'Elon Reeve Musk',
+    dob: '1971-06-28',
+    datePrecision: 'EXACT',
+    identityVerificationState: 'VERIFIED_DOCUMENTED',
+    sourceForDob: 'Pretoria Vital Statistics Official Birth Record #441971',
+    sourceForName: 'Pretoria Vital Statistics Official Birth Record #441971',
+    roleInCase: 'REFERENCE',
+    calledName: {
+      given: 'Elon',
+      surname: 'Musk',
+    },
+    birthLocation: 'Pretoria, South Africa',
+    occupation: 'Technology Executive & Industrialist',
+    notes: 'Gold-standard reference subject for 2025 advanced Time-Map validation.',
+    identities: [
+      {
+        identityId: 'id-elon-birth',
+        personId: 'person-elon',
+        exactNameString: 'Elon Reeve Musk',
+        identityType: 'BIRTH_LEGAL',
+        sociallyUsedName: 'Elon Musk',
+        legalStatus: 'Official Full Legal Birth Name',
+        fromDate: '1971-06-28',
+        verificationStatus: 'VERIFIED_DOCUMENTED',
+      },
+    ],
+  },
+
+  // 2. Julian Vance Blackwood (Suspect in forensic homicide investigation)
+  {
+    personId: 'person-julian',
+    displayName: 'Julian Blackwood',
+    verifiedBirthName: 'Julian Vance Blackwood',
+    dob: '1982-04-14',
+    datePrecision: 'EXACT',
+    identityVerificationState: 'VERIFIED_DOCUMENTED',
+    sourceForDob: 'King County Superior Court Filing 2024-CR-0891; State Birth Index',
+    sourceForName: 'King County Superior Court Filing 2024-CR-0891',
+    roleInCase: 'SUSPECT',
+    calledName: {
+      given: 'Julian',
+      surname: 'Blackwood',
+    },
+    birthLocation: 'Seattle, WA',
+    occupation: 'Real Estate Developer',
+    notes: 'Primary person of interest in the July 14, 2024 disappearance of Elena Sofia Vance.',
+    identities: [
+      {
+        identityId: 'id-julian-birth',
+        personId: 'person-julian',
+        exactNameString: 'Julian Vance Blackwood',
+        identityType: 'BIRTH_LEGAL',
+        sociallyUsedName: 'Julian Blackwood',
+        legalStatus: 'Legal Birth Name',
+        fromDate: '1982-04-14',
+        verificationStatus: 'VERIFIED_DOCUMENTED',
+      },
+    ],
+  },
+
+  // 3. Elena Sofia Vance (Victim)
+  {
+    personId: 'person-elena',
+    displayName: 'Elena Vance',
+    verifiedBirthName: 'Elena Sofia Vance',
+    dob: '1985-11-03',
+    datePrecision: 'EXACT',
+    identityVerificationState: 'VERIFIED_DOCUMENTED',
+    sourceForDob: 'Hospital Birth Certificate & State Department Passport Archive',
+    sourceForName: 'State Department Passport Archive',
+    roleInCase: 'VICTIM',
+    calledName: {
+      given: 'Elena',
+      surname: 'Vance',
+    },
+    birthLocation: 'Portland, OR',
+    occupation: 'Financial Auditor',
+    deathDate: '2024-07-16', // Disputed/alleged date
+    notes: 'Reported missing on July 15, 2024; last confirmed sighting July 14, 2024.',
+    identities: [
+      {
+        identityId: 'id-elena-birth',
+        personId: 'person-elena',
+        exactNameString: 'Elena Sofia Vance',
+        identityType: 'BIRTH_LEGAL',
+        sociallyUsedName: 'Elena Vance',
+        legalStatus: 'Legal Birth Name',
+        fromDate: '1985-11-03',
+        verificationStatus: 'VERIFIED_DOCUMENTED',
+      },
+    ],
+  },
+
+  // 4. Marcus Sterling (Associate / Alibi Witness)
+  {
+    personId: 'person-marcus',
+    displayName: 'Marcus Sterling',
+    verifiedBirthName: 'Marcus James Sterling',
+    dob: '1981-09-22',
+    datePrecision: 'EXACT',
+    identityVerificationState: 'VERIFIED_DOCUMENTED',
+    sourceForDob: 'Driver License Database Record #WDL-98213',
+    sourceForName: 'Driver License Database Record #WDL-98213',
+    roleInCase: 'WITNESS',
+    calledName: {
+      given: 'Marcus',
+      surname: 'Sterling',
+    },
+    birthLocation: 'Tacoma, WA',
+    occupation: 'Yacht Charter Operator',
+    notes: 'Provided alibi for Julian Blackwood between 22:00 July 14 and 04:00 July 15, 2024.',
+    identities: [
+      {
+        identityId: 'id-marcus-birth',
+        personId: 'person-marcus',
+        exactNameString: 'Marcus James Sterling',
+        identityType: 'BIRTH_LEGAL',
+        sociallyUsedName: 'Marcus Sterling',
+        legalStatus: 'Legal Birth Name',
+        fromDate: '1981-09-22',
+        verificationStatus: 'VERIFIED_DOCUMENTED',
+      },
+    ],
+  },
+
+  // 5. Carol Royal (Methodology benchmark for MCOM 11-carry)
+  {
+    personId: 'person-carol',
+    displayName: 'Carol Royal',
+    verifiedBirthName: 'Carol Royal',
+    dob: '1965-03-15',
+    datePrecision: 'EXACT',
+    identityVerificationState: 'VERIFIED_DOCUMENTED',
+    sourceForDob: 'Peter Vaughan Advanced Methodology Archive',
+    sourceForName: 'Peter Vaughan Advanced Methodology Archive',
+    roleInCase: 'REFERENCE',
+    calledName: {
+      given: 'Carol',
+      surname: 'Royal',
+    },
+    notes: 'Peter-verified example verifying PME 11 carry into MCOM (PME 11 + PM 5 = 16/7).',
+    identities: [
+      {
+        identityId: 'id-carol-birth',
+        personId: 'person-carol',
+        exactNameString: 'Carol Royal',
+        identityType: 'BIRTH_LEGAL',
+        sociallyUsedName: 'Carol Royal',
+        legalStatus: 'Reference Name',
+        fromDate: '1965-03-15',
+        verificationStatus: 'VERIFIED_DOCUMENTED',
+      },
+    ],
+  },
+];
+
+export const SEED_CASES: CaseRecord[] = [
+  {
+    caseId: 'case-blackwood',
+    caseNumber: 'LFS-2024-0042',
+    externalCaseNumber: 'KCSO-24-99120',
+    title: 'State v. Blackwood (Disappearance of Elena Vance)',
+    status: 'ACTIVE',
+    primaryIncidentDate: '2024-07-14',
+    primaryLocation: 'Mercer Island / Puget Sound, WA',
+    leadInvestigator: 'Alex Olson & Insp. Sarah Vance',
+    privacyLevel: 'ASSIGNED_TEAM',
+    calculationEngineVersion: CURRENT_ENGINE_VERSION,
+    lastUpdated: '2026-09-16T14:30:00Z',
+    synopsis:
+      'Multi-person forensic investigation examining the disappearance of financial auditor Elena Vance on July 14, 2024. Cross-examining call tower forensics, financial transactions, and multi-stack Lettrology Time-Maps of the primary suspect and associates.',
+    peopleIds: ['person-julian', 'person-elena', 'person-marcus'],
+    primaryIncidentId: 'event-elena-disappear',
+  },
+  {
+    caseId: 'case-elon-benchmark',
+    caseNumber: 'LFS-BENCH-001',
+    externalCaseNumber: 'PV-REF-2025',
+    title: 'The Elon Musk 2025 Time-Map Benchmark',
+    status: 'SOLVED',
+    primaryIncidentDate: '2025-01-01',
+    primaryLocation: 'Austin, TX / Boca Chica, TX',
+    leadInvestigator: 'Peter Vaughan & Alex Olson',
+    privacyLevel: 'PUBLISHED',
+    calculationEngineVersion: CURRENT_ENGINE_VERSION,
+    lastUpdated: '2026-09-10T09:00:00Z',
+    synopsis:
+      'Gold-standard verification fixture directly certifying the Lettrology calculation engine against Peter Vaughan certified reference charts. Validates 2025 ESS 32/5, PY 43/7, COM 75/12/3, and CY 9.',
+    peopleIds: ['person-elon'],
+    primaryIncidentId: 'event-elon-2025',
+  },
+  {
+    caseId: 'case-carol-royal',
+    caseNumber: 'LFS-BENCH-002',
+    title: 'Carol Royal Methodology Benchmark (PME 11 Carry)',
+    status: 'SOLVED',
+    primaryIncidentDate: '2024-05-01',
+    primaryLocation: 'Methodology Archive',
+    leadInvestigator: 'Peter Vaughan',
+    privacyLevel: 'PUBLISHED',
+    calculationEngineVersion: CURRENT_ENGINE_VERSION,
+    lastUpdated: '2026-08-01T10:00:00Z',
+    synopsis:
+      'Methodology fixture certifying authentic compound carry behavior. Confirms that an active PME of 11 carried into PM 5 produces authentic MCOM 16/7 without premature reduction.',
+    peopleIds: ['person-carol'],
+  },
+];
+
+export const SEED_EVENTS: EventRecord[] = [
+  // Blackwood Case Events
+  {
+    eventId: 'event-elena-disappear',
+    caseId: 'case-blackwood',
+    title: 'Last Confirmed Departure of Elena Vance',
+    category: 'Crime / Incident',
+    subcategory: 'Disappearance',
+    description:
+      'Elena Vance was recorded on security cameras leaving her downtown Seattle condo at 21:14 wearing a dark jacket. Cell phone connection dropped permanently at 23:42 near Mercer Island.',
+    startDate: '2024-07-14',
+    datePrecision: 'EXACT_TIME',
+    time: '21:14',
+    location: 'Downtown Seattle / I-90 Mercer Island',
+    valence: 'NEGATIVE',
+    expectedness: 'UNEXPECTED',
+    peopleInvolved: ['person-elena', 'person-julian'],
+    evidenceIds: ['ev-cctv-01', 'ev-cell-tower-01'],
+    factStatus: 'VERIFIED_DOCUMENTED',
+    sourceReliability: 'A_CONFIRMED',
+  },
+  {
+    eventId: 'event-bank-wire',
+    caseId: 'case-blackwood',
+    title: 'Unexplained Offshore Wire Transfer',
+    category: 'Financial',
+    subcategory: 'fraud allegation',
+    description:
+      'A wire transfer of $450,000 was executed from Elena Vance investment account to an offshore entity under Julian Blackwood management.',
+    startDate: '2024-07-16',
+    datePrecision: 'EXACT_DAY',
+    time: '08:30',
+    location: 'Zurich / Seattle Wire Gateway',
+    valence: 'NEGATIVE',
+    expectedness: 'UNEXPECTED',
+    peopleInvolved: ['person-elena', 'person-julian'],
+    evidenceIds: ['ev-bank-01'],
+    factStatus: 'VERIFIED_DOCUMENTED',
+    sourceReliability: 'A_CONFIRMED',
+  },
+  {
+    eventId: 'event-vehicle-recovery',
+    caseId: 'case-blackwood',
+    title: 'Vehicle Recovered at Bainbridge Ferry Dock',
+    category: 'Accident / Disruption',
+    subcategory: 'vehicle abandonment',
+    description:
+      'Elena Vance 2022 Audi Q5 was located abandoned in the long-term parking lot of the Bainbridge Island ferry terminal with keys missing and wallet in glovebox.',
+    startDate: '2024-08-02',
+    datePrecision: 'EXACT_DAY',
+    time: '14:20',
+    location: 'Bainbridge Island Ferry Terminal, WA',
+    valence: 'NEGATIVE',
+    expectedness: 'UNEXPECTED',
+    peopleInvolved: ['person-elena'],
+    evidenceIds: ['ev-vehicle-01', 'ev-police-report-01'],
+    factStatus: 'VERIFIED_DOCUMENTED',
+    sourceReliability: 'A_CONFIRMED',
+  },
+  {
+    eventId: 'event-indictment',
+    caseId: 'case-blackwood',
+    title: 'Grand Jury Indictment of Julian Blackwood',
+    category: 'Legal / Conflict',
+    subcategory: 'indictment',
+    description:
+      'Grand Jury returned an indictment charging Julian Blackwood with grand larceny and second-degree murder.',
+    startDate: '2024-09-10',
+    datePrecision: 'EXACT_DAY',
+    location: 'King County Superior Court',
+    valence: 'NEGATIVE',
+    expectedness: 'PARTIAL',
+    peopleInvolved: ['person-julian'],
+    evidenceIds: ['ev-court-indictment'],
+    factStatus: 'VERIFIED_DOCUMENTED',
+    sourceReliability: 'A_CONFIRMED',
+  },
+
+  // Elon Benchmark Events
+  {
+    eventId: 'event-elon-paypal',
+    caseId: 'case-elon-benchmark',
+    title: 'Sale of PayPal to eBay ($1.5 Billion)',
+    category: 'Opportunity / Success',
+    subcategory: 'financial acquisition',
+    description: 'eBay acquired PayPal for $1.5 billion; provided capital for SpaceX and Tesla.',
+    startDate: '2002-10-03',
+    datePrecision: 'EXACT_DAY',
+    location: 'San Jose, CA',
+    valence: 'POSITIVE',
+    expectedness: 'ANTICIPATED',
+    peopleInvolved: ['person-elon'],
+    evidenceIds: ['ev-sec-filing-01'],
+    factStatus: 'VERIFIED_DOCUMENTED',
+    sourceReliability: 'A_CONFIRMED',
+  },
+  {
+    eventId: 'event-elon-falcon1',
+    caseId: 'case-elon-benchmark',
+    title: 'SpaceX Falcon 1 Reaches Earth Orbit (Flight 4)',
+    category: 'Opportunity / Success',
+    subcategory: 'aerospace milestone',
+    description:
+      'First privately funded liquid-fueled rocket to reach orbit after three successive catastrophic test failures.',
+    startDate: '2008-09-28',
+    datePrecision: 'EXACT_DAY',
+    location: 'Omelek Island, Kwajalein Atoll',
+    valence: 'POSITIVE',
+    expectedness: 'ANTICIPATED',
+    peopleInvolved: ['person-elon'],
+    evidenceIds: ['ev-spacex-launch-01'],
+    factStatus: 'VERIFIED_DOCUMENTED',
+    sourceReliability: 'A_CONFIRMED',
+  },
+  {
+    eventId: 'event-elon-2025',
+    caseId: 'case-elon-benchmark',
+    title: 'Global Autonomous Fleet & AI Transition (2025 Milestone)',
+    category: 'Career',
+    subcategory: 'technology initiative',
+    description:
+      'Major structural realignment across autonomous robotics, humanoid deployment, and orbital networks in year 2025.',
+    startDate: '2025-01-15',
+    datePrecision: 'MONTH_YEAR',
+    location: 'Austin, TX',
+    valence: 'POSITIVE',
+    expectedness: 'ANTICIPATED',
+    peopleInvolved: ['person-elon'],
+    evidenceIds: ['ev-tech-announcement-01'],
+    factStatus: 'DOCUMENTED_CLAIM',
+    sourceReliability: 'B_RELIABLE',
+  },
+];
+
+export const SEED_EVIDENCE: EvidenceRecord[] = [
+  {
+    evidenceId: 'ev-cctv-01',
+    caseId: 'case-blackwood',
+    title: 'Surveillance Video Footage - Grandview Condo Lobby',
+    evidenceType: 'VIDEO_SURVEILLANCE',
+    sourcePublisher: 'Seattle Police Department Digital Evidence Unit',
+    publicationDate: '2024-07-15',
+    reliabilityRating: 'A',
+    verificationStatus: 'VERIFIED_DOCUMENTED',
+    relatedPeople: ['person-elena'],
+    relatedEvents: ['event-elena-disappear'],
+    extractedFacts: [
+      {
+        factId: 'fact-001',
+        evidenceId: 'ev-cctv-01',
+        exactStatement: 'Subject Elena Vance exited the south lobby glass doors at exactly 21:14:08 PST.',
+        citation: 'Camera 04, Timecode 21:14:08',
+        factStatus: 'VERIFIED_DOCUMENTED',
+        humanReviewed: true,
+        dateExtracted: '2024-07-16',
+      },
+    ],
+    analystNotes: 'High-definition color recording. Shows subject alone, carrying a canvas tote bag.',
+  },
+  {
+    evidenceId: 'ev-cell-tower-01',
+    caseId: 'case-blackwood',
+    title: 'Verizon Wireless Tower Pings (Elena Vance Handset)',
+    evidenceType: 'PHONE_RECORDS',
+    sourcePublisher: 'Verizon Law Enforcement Subpoena Compliance',
+    publicationDate: '2024-07-17',
+    reliabilityRating: 'A',
+    verificationStatus: 'VERIFIED_DOCUMENTED',
+    relatedPeople: ['person-elena', 'person-julian'],
+    relatedEvents: ['event-elena-disappear'],
+    extractedFacts: [
+      {
+        factId: 'fact-002',
+        evidenceId: 'ev-cell-tower-01',
+        exactStatement: 'Handset registered final sector tower ping at Mercer Island East sector 2 at 23:42:19 PST before powered off or destroyed.',
+        citation: 'Subpoena Return Doc #882, Page 14',
+        factStatus: 'VERIFIED_DOCUMENTED',
+        humanReviewed: true,
+        dateExtracted: '2024-07-18',
+      },
+    ],
+  },
+  {
+    evidenceId: 'ev-bank-01',
+    caseId: 'case-blackwood',
+    title: 'Wire Authorization Transcript - First Western Bank',
+    evidenceType: 'FINANCIAL_DOC',
+    sourcePublisher: 'First Western Bank Forensic Audit Division',
+    publicationDate: '2024-07-18',
+    reliabilityRating: 'A',
+    verificationStatus: 'VERIFIED_DOCUMENTED',
+    relatedPeople: ['person-elena', 'person-julian'],
+    relatedEvents: ['event-bank-wire'],
+    extractedFacts: [
+      {
+        factId: 'fact-003',
+        evidenceId: 'ev-bank-01',
+        exactStatement: '$450,000 transfer authorized via web portal utilizing IP address associated with Julian Blackwood residential router.',
+        citation: 'Forensic Audit Report, Section 3.2, Page 9',
+        factStatus: 'VERIFIED_DOCUMENTED',
+        humanReviewed: true,
+        dateExtracted: '2024-07-19',
+      },
+    ],
+  },
+  {
+    evidenceId: 'ev-court-indictment',
+    caseId: 'case-blackwood',
+    title: 'Grand Jury Indictment - State of Washington v. Julian Blackwood',
+    evidenceType: 'COURT_RECORD',
+    sourcePublisher: 'King County Prosecuting Attorney Office',
+    publicationDate: '2024-09-10',
+    reliabilityRating: 'A',
+    verificationStatus: 'VERIFIED_DOCUMENTED',
+    relatedPeople: ['person-julian'],
+    relatedEvents: ['event-indictment'],
+    extractedFacts: [
+      {
+        factId: 'fact-004',
+        evidenceId: 'ev-court-indictment',
+        exactStatement: 'Defendant indicted on Count I (Murder in the Second Degree) and Count II (First-Degree Theft).',
+        citation: 'Cause No. 24-1-08991-3, Page 1',
+        factStatus: 'VERIFIED_DOCUMENTED',
+        humanReviewed: true,
+        dateExtracted: '2024-09-11',
+      },
+    ],
+  },
+  {
+    evidenceId: 'ev-sec-filing-01',
+    caseId: 'case-elon-benchmark',
+    title: 'eBay / PayPal Merger 8-K Filing (October 2002)',
+    evidenceType: 'GOVERNMENT_RECORD',
+    sourcePublisher: 'U.S. Securities and Exchange Commission',
+    publicationDate: '2002-10-04',
+    reliabilityRating: 'A',
+    verificationStatus: 'VERIFIED_DOCUMENTED',
+    relatedPeople: ['person-elon'],
+    relatedEvents: ['event-elon-paypal'],
+    extractedFacts: [
+      {
+        factId: 'fact-005',
+        evidenceId: 'ev-sec-filing-01',
+        exactStatement: 'Merger closed October 3, 2002 at $1.5 billion transaction valuation.',
+        citation: 'Form 8-K, Item 2.01',
+        factStatus: 'VERIFIED_DOCUMENTED',
+        humanReviewed: true,
+        dateExtracted: '2026-09-01',
+      },
+    ],
+  },
+];
+
+export const SEED_HYPOTHESES: HypothesisRecord[] = [
+  {
+    hypothesisId: 'hypo-001',
+    caseId: 'case-blackwood',
+    title: 'Financial Motive & Staged Disappearance Scenario',
+    description:
+      'Hypothesizes that Julian Blackwood confronted Elena Vance regarding internal auditing discrepancies, resulting in foul play near Mercer Island, followed by staged vehicle relocation to Bainbridge Island.',
+    status: 'SUPPORTED',
+    author: 'Alex Olson & Insp. Sarah Vance',
+    supportingEvidenceIds: ['ev-bank-01', 'ev-cell-tower-01', 'ev-cctv-01'],
+    contradictingEvidenceIds: [],
+    unresolvedQuestions: [
+      'Exact vessel or vehicle used to transport Elena from Mercer Island to Puget Sound shoreline?',
+      'Did Marcus Sterling actively assist or merely provide false alibi coverage?',
+    ],
+    // PRD Section 30.1: Strictly 3 separate meters (NO guilt score)
+    evidenceCompletenessScore: 78,
+    timelineCompatibilityScore: 92,
+    lettrologyCorrelationDensityScore: 84,
+    notes:
+      'Numerical markers indicate Julian Blackwood was operating under authentic Power Number 13 in the July 2024 PM/PME layer. Note: Correlation is not evidentiary guilt; hypothesis relies on cell tower and wire records.',
+  },
+  {
+    hypothesisId: 'hypo-002',
+    caseId: 'case-blackwood',
+    title: 'Voluntary Disappearance & Offshore Embezzlement',
+    description:
+      'Defense hypothesis proposing Elena Vance voluntarily liquidated funds and orchestrated an exit via Bainbridge ferry dock.',
+    status: 'UNDER_REVIEW',
+    author: 'Defense Counsel / Reviewer Filing',
+    supportingEvidenceIds: ['ev-bank-01'],
+    contradictingEvidenceIds: ['ev-cctv-01', 'ev-cell-tower-01'],
+    unresolvedQuestions: [
+      'Why would subject leave driver license and personal passport inside abandoned Audi vehicle?',
+      'No ferry terminal camera sightings ever confirmed her presence on boarding ramps.',
+    ],
+    evidenceCompletenessScore: 32,
+    timelineCompatibilityScore: 41,
+    lettrologyCorrelationDensityScore: 19,
+    notes: 'Low evidentiary compatibility due to physical item abandonment.',
+  },
+];
+
+export const SEED_BLIND_EXPERIMENTS: BlindExperiment[] = [
+  {
+    experimentId: 'blind-exp-001',
+    caseId: 'case-blackwood',
+    title: 'Subject Julian Blackwood Blind Time-Map Evaluation (2024 Cycle)',
+    analystName: 'Senior Researcher Dr. David Chen',
+    hiddenFields: ['identity', 'photographs', 'caseType', 'knownEvents', 'outcomes'],
+    predictionHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    submittedAt: '2026-09-02T16:00:00Z',
+    isRevealed: true,
+    revealedAt: '2026-09-03T11:00:00Z',
+    predictions: {
+      expectedTransitionYears: [2024],
+      expectedDifficultyPeriods:
+        'Mid-2024 (approx. July-August) flags authentic Power Number 13 transition with sudden disruption / structural collapse risk.',
+      expectedOpportunityPeriods: 'Late 2021 through early 2022 expansion phase.',
+      analystConfidence: 'HIGH',
+      notes:
+        'Calculated strictly from masked subject DOB and name letters without case details.',
+    },
+    outcomeComparison: {
+      hits: [
+        'Accurately flagged July 2024 as a critical disruption window coincident with the documented incident on July 14, 2024.',
+        'Identified high tension in monthly combiner MCOM layer during Q3 2024.',
+      ],
+      misses: [
+        'Did not forecast legal proceedings continuing through September 2024 (predicted resolution earlier in autumn).',
+      ],
+      summary:
+        'Demonstrates high temporal correlation with critical life event while preserving strict blind protocol audit log.',
+    },
+  },
+];
+
+export const SEED_DOCUMENTS: DocumentRecord[] = [
+  {
+    documentId: 'doc-001',
+    caseId: 'case-blackwood',
+    title: 'King County Police Investigation Summary Briefing.pdf',
+    documentType: 'Official Police Briefing',
+    pageCount: 18,
+    uploadDate: '2024-07-20',
+    author: 'Seattle Police Dept - Major Crimes Taskforce',
+    extractedEntities: [
+      { entity: 'Elena Sofia Vance', type: 'VICTIM', page: 1 },
+      { entity: 'Julian Vance Blackwood', type: 'SUSPECT', page: 3 },
+      { entity: 'Mercer Island Bridge', type: 'LOCATION', page: 7 },
+      { entity: '2024-07-14', type: 'INCIDENT_DATE', page: 2 },
+    ],
+  },
+  {
+    documentId: 'doc-002',
+    caseId: 'case-blackwood',
+    title: 'Forensic Bank Wire Audit & Digital Logs.pdf',
+    documentType: 'Financial Audit Report',
+    pageCount: 34,
+    uploadDate: '2024-07-25',
+    author: 'Forensic Financial Forensics Group LLC',
+    extractedEntities: [
+      { entity: '$450,000.00 USD', type: 'TRANSACTION_AMOUNT', page: 4 },
+      { entity: 'IP 198.51.100.42', type: 'NETWORK_ORIGIN', page: 9 },
+      { entity: 'Julian Vance Blackwood', type: 'BENEFICIARY_SIGNATORY', page: 12 },
+    ],
+  },
+];
+
+export const SEED_MEDIA: MediaRecord[] = [
+  {
+    mediaId: 'med-001',
+    caseId: 'case-blackwood',
+    title: 'CCTV Still Image - South Lobby Exit (21:14 PST)',
+    mediaType: 'PHOTO',
+    capturedDate: '2024-07-14',
+    timecodeNotes: '21:14:08 PST timestamp verified against atomic clock server.',
+    taggedPeople: ['person-elena'],
+    fileUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    mediaId: 'med-002',
+    caseId: 'case-blackwood',
+    title: 'Shoreline Vehicle Abandonment Location Photograph',
+    mediaType: 'PHOTO',
+    capturedDate: '2024-08-02',
+    timecodeNotes: 'Bainbridge ferry long-term bay 14.',
+    taggedPeople: ['person-elena'],
+    fileUrl: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80',
+  },
+];

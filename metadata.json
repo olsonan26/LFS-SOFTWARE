@@ -1,0 +1,6 @@
+{
+  "name": "Lettrology Forensic Science",
+  "description": "Professional criminology and forensic research platform with deterministic Lettrology Time-Map calculation engine, chronology synchronization, and evidence tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

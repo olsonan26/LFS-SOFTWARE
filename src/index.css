@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #ffffff;
+    color: #0f172a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  .font-cinzel {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+  }
+
+  /* Font scale accessibility for senior & high-readability users */
+  html.font-scale-normal,
+  body.font-scale-normal,
+  .font-scale-normal {
+    font-size: 15px;
+  }
+  html.font-scale-large,
+  body.font-scale-large,
+  .font-scale-large {
+    font-size: 17.5px;
+  }
+  html.font-scale-xlarge,
+  body.font-scale-xlarge,
+  .font-scale-xlarge {
+    font-size: 20px;
+  }
+
+  /* Clean light theme scrollbars */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
+
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
