@@ -120,9 +120,9 @@ export const ResearchView: React.FC<ResearchViewProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-xs font-black uppercase tracking-wider text-slate-950 flex items-center gap-1.5">
               <BarChart3 className="w-4 h-4 text-amber-800" />
-              Corpus Baseline Comparison (Anti-Bias Control)
+              Sample Baseline Illustration
             </span>
-            <span className="text-xs text-slate-700 font-bold">Randomized Null-Hypothesis Baseline</span>
+            <span className="text-xs text-slate-700 font-bold">Example values — not computed from these cases</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">

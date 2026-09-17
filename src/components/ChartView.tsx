@@ -66,11 +66,11 @@ export const ChartView: React.FC<ChartViewProps> = ({
     selectedPersonId || people[0]?.personId || ''
   );
   const [displayMode, setDisplayMode] = useState<ChartDisplayMode>('ANNUAL');
-  const [selectedYear, setSelectedYear] = useState<number>(2025);
+  const [selectedYear, setSelectedYear] = useState<number>(Number(caseRecord.primaryIncidentDate.slice(0, 4)) || new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(7); // July default
-  const [viewWindow, setViewWindow] = useState<'5YR' | '10YR' | 'LIFETIME'>('10YR');
+  const [viewWindow, setViewWindow] = useState<'5YR' | '10YR' | 'LIFETIME'>('5YR');
   const [showCompounds, setShowCompounds] = useState<boolean>(true);
-  const [showEventOverlay, setShowEventOverlay] = useState<boolean>(true);
+  const [showEventOverlay, setShowEventOverlay] = useState<boolean>(false);
   const [showDiagonals, setShowDiagonals] = useState<boolean>(true);
   const [showIntensifiers, setShowIntensifiers] = useState<boolean>(true);
 
@@ -189,15 +189,17 @@ export const ChartView: React.FC<ChartViewProps> = ({
 
   return (
     <div className="space-y-4">
+      <div className="page-heading no-print"><div><p className="eyebrow">The original calculation workspace</p><h1>Lettrology Chart</h1><p className="page-description">Choose a person and a year. Explore the chart at your own pace.</p></div></div>
       {/* Chart Top Control Bar */}
-      <div className="p-4 rounded-lg bg-white border-2 border-slate-300 shadow-sm flex flex-wrap items-center justify-between gap-4">
+      <div className="chart-controls p-4 rounded-lg bg-white border-2 border-slate-300 shadow-sm">
         {/* Subject & Identity Selector */}
         <div className="flex items-center gap-3">
           <div>
             <label className="text-[11px] text-slate-700 font-bold uppercase tracking-wider block">
-              Active Subject
+              Person
             </label>
             <select
+              aria-label="Chart person"
               value={activePersonId}
               onChange={e => {
                 setActivePersonId(e.target.value);
@@ -207,7 +209,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
             >
               {people.map(p => (
                 <option key={p.personId} value={p.personId}>
-                  {p.displayName} ({p.roleInCase}) • DOB: {p.dob}
+                  {p.displayName}
                 </option>
               ))}
             </select>
@@ -233,7 +235,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                 : 'text-slate-700 hover:text-black hover:bg-slate-200'
             }`}
           >
-            Annual Time-Map
+            Annual
           </button>
           <button
             onClick={() => setDisplayMode('MONTHLY')}
@@ -243,7 +245,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                 : 'text-slate-700 hover:text-black hover:bg-slate-200'
             }`}
           >
-            Monthly Chart
+            Monthly
           </button>
           <button
             onClick={() => setDisplayMode('DAILY')}
@@ -253,7 +255,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                 : 'text-slate-700 hover:text-black hover:bg-slate-200'
             }`}
           >
-            Daily Layer
+            Daily
           </button>
           <button
             onClick={() => setDisplayMode('STACK')}
@@ -263,7 +265,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                 : 'text-slate-700 hover:text-black hover:bg-slate-200'
             }`}
           >
-            Multi-Person Stack
+            Compare people
           </button>
         </div>
 
@@ -290,6 +292,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
           {/* Year Selector */}
           <div className="flex items-center gap-1 bg-slate-50 border-2 border-slate-300 rounded-md px-2 py-1 shadow-sm">
             <button
+              aria-label="Previous year"
               onClick={() => setSelectedYear(y => y - 1)}
               className="text-slate-700 hover:text-black p-0.5"
             >
@@ -299,6 +302,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
               {selectedYear}
             </span>
             <button
+              aria-label="Next year"
               onClick={() => setSelectedYear(y => y + 1)}
               className="text-slate-700 hover:text-black p-0.5"
             >
@@ -306,6 +310,8 @@ export const ChartView: React.FC<ChartViewProps> = ({
             </button>
           </div>
 
+          <button className="secondary-button" onClick={() => {const [year,month] = caseRecord.primaryIncidentDate.split('-').map(Number);if(year) setSelectedYear(year);if(month) setSelectedMonth(month);}}>Jump to incident</button>
+          <label className="flex items-center gap-2"><input type="checkbox" checked={showEventOverlay} onChange={e => setShowEventOverlay(e.target.checked)}/>Show case events</label>
           {/* Print / Export Button */}
           <button
             onClick={handlePrint}
@@ -318,7 +324,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
       </div>
 
       {/* Incident Quick-Jump Ribbon */}
-      {relevantEvents.length > 0 && (
+      {showEventOverlay && relevantEvents.length > 0 && (
         <div className="px-4 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-lg flex items-center gap-2 overflow-x-auto text-xs shadow-sm">
           <span className="text-[11px] uppercase font-bold tracking-wider text-slate-700 whitespace-nowrap">
             Documented Incidents:
@@ -357,13 +363,13 @@ export const ChartView: React.FC<ChartViewProps> = ({
             <div className="flex items-center gap-2">
               <CalendarRange className="w-4 h-4 text-amber-800" />
               <h3 className="text-sm font-black tracking-wider text-slate-950 uppercase">
-                Annual Time-Map: {currentPerson.displayName}
+                Annual: {currentPerson.displayName}
               </h3>
               <span className="text-xs font-semibold text-slate-700">
                 (Cycle: {currentPerson.verifiedBirthName} • DOB: {currentPerson.dob})
               </span>
             </div>
-            <div className="flex items-center gap-4 text-xs font-bold text-slate-800">
+            <details className="chart-settings"><summary>Chart display options</summary><div className="flex items-center gap-4 text-xs font-bold text-slate-800">
               <label className="flex items-center gap-1.5 cursor-pointer">
                 <input
                   type="checkbox"
@@ -391,7 +397,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                 />
                 <span>Intensifications</span>
               </label>
-            </div>
+            </div></details>
           </div>
 
           {/* Time-Map Matrix Table */}
@@ -691,7 +697,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-amber-800" />
                 <h3 className="text-sm font-black tracking-wider text-slate-950 uppercase">
-                  Monthly Chart: Year {selectedYear} ({currentPerson.displayName})
+                  Monthly: Year {selectedYear} ({currentPerson.displayName})
                 </h3>
                 <span className="text-xs font-bold text-slate-700">
                   Annual PY: {formatCompound(selectedAnnualState.py)} • ESS: {formatCompound(selectedAnnualState.ess)}
@@ -881,7 +887,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
           <div className="rounded-lg bg-white border-2 border-slate-300 p-4 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-black tracking-wider text-slate-950 uppercase">
-                Daily Layer: {selectedMonthlyState.monthName} {selectedYear} ({currentPerson.displayName})
+                Daily: {selectedMonthlyState.monthName} {selectedYear} ({currentPerson.displayName})
               </h3>
               <div className="text-xs font-bold text-slate-700">
                 Active PM: {formatCompound(selectedMonthlyState.pm)} • PME: {formatCompound(selectedMonthlyState.pme)}

@@ -25,8 +25,8 @@ export const BlindAnalysisView: React.FC<BlindAnalysisViewProps> = ({
   caseRecord,
   events,
 }) => {
-  const [experiment, setExperiment] = useState<BlindExperiment>(SEED_BLIND_EXPERIMENTS[0]);
-  const [isRevealed, setIsRevealed] = useState<boolean>(experiment.isRevealed);
+  const [experiment, setExperiment] = useState<BlindExperiment | undefined>(() => SEED_BLIND_EXPERIMENTS.find(e => e.caseId === caseRecord.caseId));
+  const [isRevealed, setIsRevealed] = useState<boolean>(experiment?.isRevealed || false);
   const [newPredYear, setNewPredYear] = useState<number>(2024);
   const [newPredDifficulty, setNewPredDifficulty] = useState<string>(
     'Critical disruption & acute pressure window'
@@ -37,6 +37,7 @@ export const BlindAnalysisView: React.FC<BlindAnalysisViewProps> = ({
   const [newConfidence, setNewConfidence] = useState<'HIGH' | 'MEDIUM' | 'EXPLORATORY'>('HIGH');
 
   const handleRevealExperiment = () => {
+    if (!experiment) return;
     setIsRevealed(true);
     setExperiment(prev => ({
       ...prev,
@@ -45,6 +46,8 @@ export const BlindAnalysisView: React.FC<BlindAnalysisViewProps> = ({
     }));
   };
 
+  if (!experiment) return <div className="empty-state"><h2>No blind study for this case</h2><p>No experiment has been recorded for this investigation.</p></div>;
+
   return (
     <div className="space-y-4">
       {/* Header Banner */}
@@ -52,7 +55,7 @@ export const BlindAnalysisView: React.FC<BlindAnalysisViewProps> = ({
         <ShieldCheck className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
         <div>
           <span className="font-black uppercase tracking-wider text-blue-950 block mb-0.5 text-sm">
-            Blind Analysis Scientific Protocol (PRD Section 31)
+            Blind Study — sample protocol
           </span>
           <p className="text-slate-800 font-medium leading-relaxed">
             To prevent confirmation bias and retrospective fitting, analysts formulate timing forecasts with case facts,

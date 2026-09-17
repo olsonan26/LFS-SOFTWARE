@@ -54,7 +54,7 @@ export const ForensicFocusView: React.FC<ForensicFocusViewProps> = ({
   const [activeSubjectId, setActiveSubjectId] = useState<string>(
     people[0]?.personId || ''
   );
-  const [showExperimental, setShowExperimental] = useState<boolean>(true);
+  const [showExperimental, setShowExperimental] = useState<boolean>(false);
 
   // Selected event
   const selectedEvent = useMemo(() => {
@@ -138,21 +138,9 @@ export const ForensicFocusView: React.FC<ForensicFocusViewProps> = ({
 
   return (
     <div className="space-y-4">
+      <div className="page-heading"><div><p className="eyebrow">Lettrology research</p><h1>Pattern Analysis</h1><p className="page-description">Choose an event and a person to inspect the calculation trail.</p></div></div>
       {/* Top Banner: Absolute Rule 7 & 15 Warning */}
-      <div className="p-4 rounded-lg bg-amber-50 border-2 border-amber-400 flex items-start gap-3 text-xs text-amber-950 shadow-sm">
-        <ShieldAlert className="w-5 h-5 text-amber-800 shrink-0 mt-0.5" />
-        <div>
-          <span className="font-black uppercase tracking-wider text-amber-950 block mb-0.5 text-xs">
-            Forensic Focus Standard: Numerical Pattern Research Is Not Evidentiary Proof
-          </span>
-          <p className="text-slate-800 font-medium leading-relaxed">
-            The calculations below represent deterministic numerical timing models associated with the subject’s
-            verified birth name and date of birth during the documented event window. These patterns do not establish
-            culpability, motive, guilt, or legal responsibility. Factual conclusions must rely exclusively on physical,
-            documentary, and corroborated forensic evidence.
-          </p>
-        </div>
-      </div>
+      <details className="expandable-section"><summary><span>About patterns and evidence</span></summary><div className="expanded-content"><p>Lettrology patterns are research interpretations. They do not establish motive, guilt, or legal responsibility. Factual conclusions require independent supporting evidence.</p></div></details>
 
       {/* Control Header: Event & Subject Selector */}
       <div className="p-4 rounded-lg bg-white border-2 border-slate-300 flex flex-wrap items-center justify-between gap-4 shadow-sm">
@@ -213,9 +201,9 @@ export const ForensicFocusView: React.FC<ForensicFocusViewProps> = ({
       </div>
 
       {/* Main Grid: Event Facts (Left) & Complete Arithmetic Signature (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div className="flex flex-col gap-6">
         {/* Left Column: Factual Evidence & Event Profile */}
-        <div className="lg:col-span-4 space-y-4">
+        <details className="expandable-section"><summary><span>Event facts & supporting sources</span></summary>
           <div className="rounded-lg bg-white border-2 border-slate-300 p-4 shadow-sm">
             <div className="flex items-center justify-between pb-3 border-b-2 border-slate-200 mb-3">
               <h4 className="text-xs font-black uppercase tracking-wider text-slate-950 flex items-center gap-2">
@@ -306,7 +294,7 @@ export const ForensicFocusView: React.FC<ForensicFocusViewProps> = ({
               </div>
             </div>
           </div>
-        </div>
+        </details>
 
         {/* Right Column: Complete Arithmetic Signature Panel (PRD Section 24.2) */}
         <div className="lg:col-span-8 space-y-4">
@@ -410,6 +398,7 @@ export const ForensicFocusView: React.FC<ForensicFocusViewProps> = ({
                   </table>
                 </div>
 
+                <details className="expandable-section"><summary><span>Interpretations & pattern meanings</span></summary><div className="expanded-content">
                 {/* Analytical Observations (PRD Section 49 Wording Rules) */}
                 <div className="p-3.5 bg-slate-50 rounded-lg border-2 border-slate-300 space-y-2">
                   <span className="text-xs uppercase tracking-wider text-slate-950 font-black block">
@@ -440,6 +429,7 @@ export const ForensicFocusView: React.FC<ForensicFocusViewProps> = ({
                     );
                   })}
                 </div>
+                </div></details>
               </div>
             )}
           </div>

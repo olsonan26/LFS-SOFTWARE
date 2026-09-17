@@ -156,7 +156,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             1. Case Summary & Core Incident
           </h3>
           <p className="text-xs text-slate-900 font-semibold leading-relaxed">
-            {caseRecord.summary}
+            {caseRecord.synopsis}
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-2">
             <div className="p-2.5 rounded-md bg-slate-50 border-2 border-slate-200">
@@ -173,7 +173,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             </div>
             <div className="p-2.5 rounded-md bg-slate-50 border-2 border-slate-200">
               <span className="text-[11px] text-slate-700 font-bold block uppercase">Location:</span>
-              <span className="font-black text-slate-950">{caseRecord.incidentLocation || 'N/A'}</span>
+              <span className="font-black text-slate-950">{caseRecord.primaryLocation || 'N/A'}</span>
             </div>
           </div>
         </div>
@@ -251,9 +251,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                   <span className="text-blue-900 uppercase font-black">{h.status}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-xs pt-1.5 border-t-2 border-slate-200 font-bold">
-                  <div>Evidence: <strong className="text-emerald-800 font-black">{h.evidenceCompleteness}%</strong></div>
-                  <div>Timeline: <strong className="text-blue-900 font-black">{h.timelineCompatibility}%</strong></div>
-                  <div>Lettrology Density: <strong className="text-amber-900 font-black">{h.lettrologyCorrelationDensity}%</strong></div>
+                  <div>Evidence: <strong className="text-emerald-800 font-black">{h.evidenceCompletenessScore}%</strong></div>
+                  <div>Timeline: <strong className="text-blue-900 font-black">{h.timelineCompatibilityScore}%</strong></div>
+                  <div>Lettrology Density: <strong className="text-amber-900 font-black">{h.lettrologyCorrelationDensityScore}%</strong></div>
                 </div>
               </div>
             ))}
