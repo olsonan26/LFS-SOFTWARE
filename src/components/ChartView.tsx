@@ -19,6 +19,9 @@ import {
   Clock,
   ArrowRightLeft,
   CheckCircle2,
+  Table,
+  Grid,
+  X,
 } from 'lucide-react';
 import { PersonRecord, EventRecord, CaseRecord } from '../types.ts';
 import {
@@ -42,6 +45,12 @@ import {
   formatShortCompound,
 } from '../core/lettrology-engine/compoundTrail.ts';
 import { CURRENT_ENGINE_VERSION } from '../core/lettrology-engine/methodologyVersion.ts';
+import { Report } from '../core/lettrology-engine/canonicalReport.ts';
+import {
+  CanonicalYearGrid,
+  CanonicalMonthlyTimelineView,
+  CanonicalPrintReport,
+} from './CanonicalChartComponents.tsx';
 
 interface ChartViewProps {
   caseRecord: CaseRecord;
@@ -73,6 +82,9 @@ export const ChartView: React.FC<ChartViewProps> = ({
   const [showEventOverlay, setShowEventOverlay] = useState<boolean>(true);
   const [showDiagonals, setShowDiagonals] = useState<boolean>(true);
   const [showIntensifiers, setShowIntensifiers] = useState<boolean>(true);
+  const [annualChartStyle, setAnnualChartStyle] = useState<'REFERENCE' | 'FORENSIC'>('REFERENCE');
+  const [monthlyChartStyle, setMonthlyChartStyle] = useState<'REFERENCE' | 'FORENSIC'>('REFERENCE');
+  const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
 
   // Synchronize external person selection
   React.useEffect(() => {
@@ -84,6 +96,16 @@ export const ChartView: React.FC<ChartViewProps> = ({
   const currentPerson = useMemo(() => {
     return people.find(p => p.personId === activePersonId) || people[0];
   }, [people, activePersonId]);
+
+  // Canonical Reference Report instance from GitHub reference standard
+  const canonicalReport = useMemo(() => {
+    if (!currentPerson) return null;
+    return new Report(
+      currentPerson.verifiedBirthName,
+      currentPerson.dob,
+      selectedYear
+    );
+  }, [currentPerson, selectedYear]);
 
   // Generate full lifetime annual states for current person
   const annualStates = useMemo(() => {
@@ -176,7 +198,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
   }, [events, currentPerson, caseRecord]);
 
   const handlePrint = () => {
-    window.print();
+    setShowPrintModal(true);
   };
 
   if (!currentPerson) {
@@ -352,7 +374,54 @@ export const ChartView: React.FC<ChartViewProps> = ({
 
       {/* VIEW 1: ANNUAL TIME-MAP */}
       {displayMode === 'ANNUAL' && (
-        <div className="rounded-lg bg-white border-2 border-slate-300 overflow-hidden shadow-sm">
+        <div className="space-y-4">
+          {/* Format Sub-switcher */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white border-2 border-slate-300 rounded-lg shadow-sm">
+            <div className="flex items-center gap-2">
+              <CalendarRange className="w-4 h-4 text-amber-800" />
+              <span className="text-xs font-black uppercase tracking-wider text-slate-950">
+                Annual Chart Mode:
+              </span>
+              <span className="text-xs text-slate-600 font-semibold">
+                ({currentPerson.displayName} • DOB: {currentPerson.dob})
+              </span>
+            </div>
+            <div className="flex items-center bg-slate-100 p-1 rounded-md border-2 border-slate-300 text-xs">
+              <button
+                onClick={() => setAnnualChartStyle('REFERENCE')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded font-black uppercase tracking-wider transition-colors ${
+                  annualChartStyle === 'REFERENCE'
+                    ? 'bg-slate-950 text-white shadow-sm'
+                    : 'text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+              >
+                <Grid className="w-3.5 h-3.5" />
+                <span>Reference Standard Grid (GitHub Canon)</span>
+              </button>
+              <button
+                onClick={() => setAnnualChartStyle('FORENSIC')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded font-black uppercase tracking-wider transition-colors ${
+                  annualChartStyle === 'FORENSIC'
+                    ? 'bg-slate-950 text-white shadow-sm'
+                    : 'text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+              >
+                <Table className="w-3.5 h-3.5" />
+                <span>Forensic Matrix Table</span>
+              </button>
+            </div>
+          </div>
+
+          {annualChartStyle === 'REFERENCE' && canonicalReport && (
+            <CanonicalYearGrid
+              report={canonicalReport}
+              length={viewWindow === '5YR' ? 10 : viewWindow === '10YR' ? 30 : 80}
+              onSelectYear={year => setSelectedYear(year)}
+            />
+          )}
+
+          {annualChartStyle === 'FORENSIC' && (
+            <div className="rounded-lg bg-white border-2 border-slate-300 overflow-hidden shadow-sm">
           <div className="px-4 py-3 border-b-2 border-slate-300 bg-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CalendarRange className="w-4 h-4 text-amber-800" />
@@ -681,12 +750,60 @@ export const ChartView: React.FC<ChartViewProps> = ({
             </table>
           </div>
         </div>
+        )}
+      </div>
       )}
 
       {/* VIEW 2: MONTHLY CHART (PRD Section 19) */}
       {displayMode === 'MONTHLY' && (
         <div className="space-y-4">
-          <div className="rounded-lg bg-white border-2 border-slate-300 overflow-hidden shadow-sm">
+          {/* Format Sub-switcher */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white border-2 border-slate-300 rounded-lg shadow-sm">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-amber-800" />
+              <span className="text-xs font-black uppercase tracking-wider text-slate-950">
+                Monthly Chart Mode:
+              </span>
+              <span className="text-xs text-slate-600 font-semibold">
+                ({currentPerson.displayName} • Focus Year: {selectedYear})
+              </span>
+            </div>
+            <div className="flex items-center bg-slate-100 p-1 rounded-md border-2 border-slate-300 text-xs">
+              <button
+                onClick={() => setMonthlyChartStyle('REFERENCE')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded font-black uppercase tracking-wider transition-colors ${
+                  monthlyChartStyle === 'REFERENCE'
+                    ? 'bg-slate-950 text-white shadow-sm'
+                    : 'text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+              >
+                <Grid className="w-3.5 h-3.5" />
+                <span>Reference Standard Cards (3-Year Band)</span>
+              </button>
+              <button
+                onClick={() => setMonthlyChartStyle('FORENSIC')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded font-black uppercase tracking-wider transition-colors ${
+                  monthlyChartStyle === 'FORENSIC'
+                    ? 'bg-slate-950 text-white shadow-sm'
+                    : 'text-slate-700 hover:text-black hover:bg-slate-200'
+                }`}
+              >
+                <Table className="w-3.5 h-3.5" />
+                <span>Forensic 12-Month Matrix</span>
+              </button>
+            </div>
+          </div>
+
+          {monthlyChartStyle === 'REFERENCE' && canonicalReport && (
+            <CanonicalMonthlyTimelineView
+              report={canonicalReport}
+              selectedYear={selectedYear}
+              onSelectYear={year => setSelectedYear(year)}
+            />
+          )}
+
+          {monthlyChartStyle === 'FORENSIC' && (
+            <div className="rounded-lg bg-white border-2 border-slate-300 overflow-hidden shadow-sm">
             <div className="px-4 py-3 border-b-2 border-slate-300 bg-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-amber-800" />
@@ -857,6 +974,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
               </table>
             </div>
           </div>
+          )}
         </div>
       )}
 
@@ -1030,6 +1148,41 @@ export const ChartView: React.FC<ChartViewProps> = ({
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Canonical Print Report Modal */}
+      {showPrintModal && canonicalReport && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white">
+          <div className="bg-white border-2 border-slate-400 rounded-xl shadow-2xl max-w-6xl w-full max-h-[92vh] flex flex-col print:border-none print:shadow-none print:max-h-none print:max-w-none">
+            <div className="p-4 border-b-2 border-slate-300 flex items-center justify-between bg-slate-100 print:hidden">
+              <div className="flex items-center gap-2">
+                <Printer className="w-5 h-5 text-amber-800" />
+                <h3 className="text-sm font-black uppercase tracking-wider text-slate-950">
+                  Student Standard Print Chart: {currentPerson.displayName}
+                </h3>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-wider rounded-md shadow flex items-center gap-1.5 transition-colors"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Send to Browser Print / PDF</span>
+                </button>
+                <button
+                  onClick={() => setShowPrintModal(false)}
+                  className="p-1.5 rounded-md hover:bg-slate-200 text-slate-700 hover:text-black transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 bg-white print:p-0">
+              <CanonicalPrintReport report={canonicalReport} onPrint={() => window.print()} />
+            </div>
           </div>
         </div>
       )}

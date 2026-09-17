@@ -7,6 +7,7 @@
 import { calculateEssence, calculatePersonalYear, calculateCalendarYear, calculateYearlyCombiner, generateAnnualTimeMap } from './annualEngine.ts';
 import { calculatePersonalMonth, calculatePersonalMonthEssence, calculateMonthlyCombiner, getCalendarMonthReduced, generateMonthlyCalendar } from './monthlyEngine.ts';
 import { reduceWithTrail, formatCompound } from './compoundTrail.ts';
+import { Report } from './canonicalReport.ts';
 
 export interface TestCaseResult {
   testId: string;
@@ -182,6 +183,105 @@ export function runAllAcceptanceTests(): TestCaseResult[] {
       name: 'Calendar Month Reduction (Q4)',
       description: 'Verifies Q4 month reduction',
       expected: 'Oct: 1, Nov: 2, Dec: 3',
+      actual: `Error: ${err.message}`,
+      passed: false,
+    });
+  }
+
+  // Test 7: Exact Canonical Student Reference Report (Roman Peter Vaughan Benchmark)
+  try {
+    const report = new Report("Roman Peter Vaughan", "24/05/1992", 2026);
+    const yearSet = report.getYearSet(25, 20);
+    const monthSet = report.getMonthSet(34);
+
+    const ageOk = report.age === 34;
+    const essOk = yearSet.essence === "15553222287559994477";
+    const pyOk = yearSet.personalYear === "34567891234567891234";
+    const cyOk = yearSet.calendarYear === "12345678912345678912";
+    const comOk = yearSet.combined === "49121123422127895612";
+    const mEssOk = monthSet.essence === "888888888888";
+    const mPyOk = monthSet.personalYear === "333333333333";
+    const mPmOk = monthSet.personalMonth === "456789123456";
+    const mPmeOk = monthSet.personalMonthEssence === "345678912345";
+    const mMcomOk = monthSet.combined === "792468135792";
+
+    const passed = ageOk && essOk && pyOk && cyOk && comOk && mEssOk && mPyOk && mPmOk && mPmeOk && mMcomOk;
+
+    results.push({
+      testId: 'TEST-007',
+      name: 'Canonical Student Reference Report (Roman Peter Vaughan Benchmark)',
+      description: 'Matches exact formulas for Annual getYearSet and Monthly getMonthSet',
+      expected: 'Matches all canonical outputs exactly',
+      actual: passed ? 'All match canonical values' : 'Mismatch detected',
+      passed,
+    });
+  } catch (err: any) {
+    results.push({
+      testId: 'TEST-007',
+      name: 'Canonical Student Reference Report (Roman Peter Vaughan Benchmark)',
+      description: 'Matches exact formulas for Annual getYearSet and Monthly getMonthSet',
+      expected: 'Matches all canonical outputs exactly',
+      actual: `Error: ${err.message}`,
+      passed: false,
+    });
+  }
+
+  // Test 8: Canonical Lifetime Print Footer (Alexander Benchmark)
+  try {
+    const report = new Report("Alexander", "01/01/2000", 2026);
+    const lifetime = report.getYearSet(0, 80);
+
+    const lenOk = lifetime.names.length === 1;
+    const slashOk = lifetime.combined[0] === "/";
+    const nameCycleOk = lifetime.names[0].startsWith(" ALLLEEEEEXXXXXX");
+
+    const passed = lenOk && slashOk && nameCycleOk;
+    results.push({
+      testId: 'TEST-008',
+      name: 'Canonical Lifetime Print Sequence (Alexander Benchmark)',
+      description: 'Verifies repeated letter cycles, age 0 blank letter, and leading slash in combined',
+      expected: 'Names offset with age 0 space, combined starts with /',
+      actual: passed ? 'Verified canonical sequence structure' : 'Mismatch',
+      passed,
+    });
+  } catch (err: any) {
+    results.push({
+      testId: 'TEST-008',
+      name: 'Canonical Lifetime Print Sequence (Alexander Benchmark)',
+      description: 'Verifies repeated letter cycles, age 0 blank letter, and leading slash in combined',
+      expected: 'Names offset with age 0 space, combined starts with /',
+      actual: `Error: ${err.message}`,
+      passed: false,
+    });
+  }
+
+  // Test 9: Identification of Power Numbers 11, 13, and 16
+  try {
+    const report = new Report("Roman Peter Vaughan", "24/05/1992", 2026);
+    const monthPowers = report.getMonthPowerAnalysis(34);
+    const augAnalysis = monthPowers[7]; // Month 8 (Aug): CM 8, PY 3 -> 3+8 = 11 (PN 11)
+    const aprAnalysis = monthPowers[3]; // Month 4 (Apr): MCOM 13 (6+7=13) (PN 13)
+    const mayAnalysis = monthPowers[4]; // Month 5 (May): PME 16 (8+8=16) (PN 16)
+
+    const augOk = augAnalysis.pmPower?.powerNumber === 11;
+    const aprOk = aprAnalysis.mcomPower?.powerNumber === 13;
+    const mayOk = mayAnalysis.pmePower?.powerNumber === 16;
+
+    const passed = augOk && aprOk && mayOk;
+    results.push({
+      testId: 'TEST-009',
+      name: 'Power Number Identification (11, 13, 16)',
+      description: 'Identifies 11 (Aug PM), 13 (Apr MCOM), and 16 (May PME) for Roman Peter Vaughan (age 34)',
+      expected: 'Aug PM=11, Apr MCOM=13, May PME=16',
+      actual: `Aug PM: ${augAnalysis.pmPower?.powerNumber}, Apr MCOM: ${aprAnalysis.mcomPower?.powerNumber}, May PME: ${mayAnalysis.pmePower?.powerNumber}`,
+      passed,
+    });
+  } catch (err: any) {
+    results.push({
+      testId: 'TEST-009',
+      name: 'Power Number Identification (11, 13, 16)',
+      description: 'Identifies 11, 13, and 16 across chart rows',
+      expected: 'Aug PM=11, Apr MCOM=13, May PME=16',
       actual: `Error: ${err.message}`,
       passed: false,
     });
