@@ -65,7 +65,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     icon: ShieldCheck,
     headline: 'Deterministic Criminology & Time-Map Research',
     description:
-      'Lettrology Forensic Science is a specialized investigative platform that evaluates human cycles, vibrational time-maps, and incident chronologies using strict deterministic arithmetic. Unlike speculative numerology, every calculation adheres to mathematical formulas verified by vital records and forensic audit trails.',
+      'Lettrology Forensic Science is a specialized investigative platform that evaluates human cycles, vibrational time-maps, and incident chronologies using strict deterministic arithmetic. Calculations follow recorded Lettrology formulas; interpretations remain separate from evidence.',
     bulletPoints: [
       {
         title: 'Deterministic Arithmetic',
@@ -118,7 +118,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     tabLabel: 'People Tab',
     headline: 'Certified Birth Records & Six Primary Fixed Numbers',
     description:
-      'Under PRD Section 9.1, accurate Lettrology analysis strictly mandates verified full birth legal names (First, Middle, Surname) directly transcribed from vital statistics certificates or legal records. Social nicknames and called names are recorded separately.',
+      'Accurate Lettrology analysis requires verified full birth legal names (First, Middle, Surname) directly transcribed from vital statistics certificates or legal records. Social nicknames and called names are recorded separately.',
     bulletPoints: [
       {
         title: 'Six Primary Fixed Numbers',
@@ -130,7 +130,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       },
       {
         title: 'Direct Chart Integration',
-        desc: 'Click "Open Full Time-Map Chart" on any subject card to immediately plot their lifetime vibrational spans.',
+        desc: 'Click "Open chart" on a person’s profile to immediately plot their lifetime vibrational spans.',
       },
     ],
     actionLabel: 'Explore Subject Profiles',
@@ -620,7 +620,7 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
               {playgroundProfile && (
                 <div className="space-y-2 pt-1">
                   <span className="text-xs uppercase text-slate-900 font-black block">
-                    Calculated Primary Fixed Numbers (Deterministic PRD §13 Output):
+                    Calculated primary numbers:
                   </span>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-center">
                     <div className="p-2.5 rounded-lg bg-white border-2 border-slate-300 shadow-sm">

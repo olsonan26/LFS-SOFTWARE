@@ -1,387 +1,451 @@
-/**
- * @license
- * Lettrology Forensic Science - People & Identity Management
- * PRD Section 9, 13 (Six Primary Fixed Numbers), 14 (Called Name), 36.2
- */
-
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from "react";
 import {
-  Users,
-  UserCheck,
-  ShieldCheck,
-  Award,
-  Calendar,
-  FileText,
-  Clock,
-  ChevronRight,
   Plus,
-  Compass,
-  Heart,
-  Sparkles,
-  Layers,
+  Search,
+  ArrowRight,
+  UserRound,
   LineChart,
-} from 'lucide-react';
-import { PersonRecord, IdentityRecord, CaseRecord } from '../types.ts';
-import { calculatePrimaryProfile, PrimaryFixedProfile } from '../core/lettrology-engine/identityCalculations.ts';
-import { formatCompound } from '../core/lettrology-engine/compoundTrail.ts';
-
-interface PeopleViewProps {
+  Brain,
+  FileText,
+  Users,
+} from "lucide-react";
+import {
+  PersonRecord,
+  CaseRecord,
+  EventRecord,
+  EvidenceRecord,
+} from "../types";
+import { calculatePrimaryProfile } from "../core/lettrology-engine/identityCalculations";
+import { formatCompound } from "../core/lettrology-engine/compoundTrail";
+import {
+  PageHeading,
+  EmptyState,
+  ExpandableSection,
+  FollowTrail,
+  humanize,
+  displayDate,
+} from "./WorkspaceUI";
+interface Props {
   caseRecord: CaseRecord;
   people: PersonRecord[];
-  onSelectPersonForChart: (personId: string) => void;
+  events: EventRecord[];
+  evidenceList: EvidenceRecord[];
+  selectedPersonId?: string;
+  onSelectPersonForChart: (id: string) => void;
   onOpenNewPersonModal: () => void;
+  onOpenTimeline: () => void;
+  onOpenEvidence: () => void;
 }
-
-export const PeopleView: React.FC<PeopleViewProps> = ({
-  caseRecord,
-  people,
-  onSelectPersonForChart,
-  onOpenNewPersonModal,
-}) => {
-  const [selectedPersonId, setSelectedPersonId] = useState<string>(
-    people[0]?.personId || ''
+export function PeopleView(p: Props) {
+  const [selected, setSelected] = useState(p.selectedPersonId || "");
+  const [query, setQuery] = useState("");
+  const [role, setRole] = useState("ALL");
+  const [tab, setTab] = useState("profile");
+  const person = p.people.find((x) => x.personId === selected);
+  const fixed = useMemo(
+    () =>
+      person
+        ? calculatePrimaryProfile(
+            person.verifiedBirthName,
+            person.dob,
+            person.calledName,
+          )
+        : null,
+    [person],
   );
-  const [activeRoleFilter, setActiveRoleFilter] = useState<string>('ALL');
-
-  const filteredPeople = useMemo(() => {
-    if (activeRoleFilter === 'ALL') return people;
-    return people.filter(p => p.roleInCase === activeRoleFilter);
-  }, [people, activeRoleFilter]);
-
-  const currentPerson = useMemo(() => {
-    return people.find(p => p.personId === selectedPersonId) || people[0];
-  }, [people, selectedPersonId]);
-
-  // Compute 6 Primary Fixed Numbers and Called Name
-  const fixedProfile: PrimaryFixedProfile | null = useMemo(() => {
-    if (!currentPerson) return null;
-    return calculatePrimaryProfile(
-      currentPerson.verifiedBirthName,
-      currentPerson.dob,
-      currentPerson.calledName
-    );
-  }, [currentPerson]);
-
-  if (!currentPerson) {
-    return <div className="p-8 text-center text-slate-700 font-bold">No people records available.</div>;
-  }
-
+  const filtered = p.people.filter(
+    (x) =>
+      (role === "ALL" || x.roleInCase === role) &&
+      `${x.displayName} ${x.verifiedBirthName}`
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+  );
+  const linkedEvents = p.events.filter(
+    (e) => person && e.peopleInvolved.includes(person.personId),
+  );
+  const linkedEvidence = p.evidenceList.filter(
+    (e) => person && e.relatedPeople.includes(person.personId),
+  );
+  const rows = fixed
+    ? ([
+        ["Initial impressions", "First name", fixed.firstName],
+        ["Personality", "Full birth name", fixed.fullName],
+        ["Heart’s desire", "Vowels", fixed.vowels],
+        ["Habits", "Day of birth", fixed.dayOfBirth],
+        ["Natural skills", "Total birth date", fixed.totalBirthDate],
+        ["Ultimate goal", "Full name + birth date", fixed.ultimateGoal],
+      ] as const)
+    : [];
   return (
-    <div className="space-y-4">
-      {/* Top Header & Role Filter */}
-      <div className="p-4 rounded-lg bg-white border-2 border-slate-300 shadow-sm flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-base font-black text-slate-950 uppercase tracking-wider flex items-center gap-2">
-            <Users className="w-5 h-5 text-amber-700" />
-            People & Identity Repository
-          </h2>
-          <p className="text-xs text-slate-700 font-medium">
-            Authoritative identity provenance, legal identities, and deterministic fixed Lettrology profiles.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Role Filter Tabs */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-md border-2 border-slate-300 text-xs">
-            {['ALL', 'SUSPECT', 'VICTIM', 'WITNESS', 'REFERENCE'].map(role => (
+    <div className="page-stack">
+      <PageHeading
+        eyebrow="People behind the case"
+        title={person ? `Who is ${person.displayName}?` : "People"}
+        description={
+          person
+            ? "A clear profile, with deeper detail when you need it."
+            : "Choose a person to explore their identity, chart and case connections."
+        }
+        action={
+          <button className="secondary-button" onClick={p.onOpenNewPersonModal}>
+            <Plus size={20} />
+            Add person
+          </button>
+        }
+      />
+      {!person ? (
+        <>
+          <div className="library-toolbar">
+            <div className="search-field">
+              <Search size={20} />
+              <input
+                aria-label="Search people"
+                placeholder="Find a person"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            <label className="filter-label">
+              Role
+              <select value={role} onChange={(e) => setRole(e.target.value)}>
+                <option value="ALL">All roles</option>
+                {Array.from(new Set(p.people.map((x) => x.roleInCase))).map(
+                  (x) => (
+                    <option key={x} value={x}>
+                      {humanize(x)}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+          </div>
+          <div className="people-grid">
+            {filtered.map((x) => (
               <button
-                key={role}
-                onClick={() => setActiveRoleFilter(role)}
-                className={`px-2.5 py-1 rounded font-bold uppercase tracking-wider transition-colors ${
-                  activeRoleFilter === role
-                    ? 'bg-slate-950 text-white shadow-sm'
-                    : 'text-slate-700 hover:text-black hover:bg-slate-200'
-                }`}
+                key={x.personId}
+                className="person-card"
+                onClick={() => {
+                  setSelected(x.personId);
+                  setTab("profile");
+                }}
               >
-                {role}
+                <span className="avatar">
+                  <UserRound size={30} />
+                </span>
+                <span className="status-badge">{humanize(x.roleInCase)}</span>
+                <h2>{x.displayName}</h2>
+                <p>{x.occupation || "Identity record"}</p>
+                <span className="person-card-footer">
+                  View profile
+                  <ArrowRight size={20} />
+                </span>
               </button>
             ))}
           </div>
-
-          <button
-            onClick={onOpenNewPersonModal}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-slate-950 hover:bg-slate-800 text-xs text-white font-bold transition-colors uppercase tracking-wider shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Add Subject
-          </button>
-        </div>
-      </div>
-
-      {/* Main Grid: Person List (Left) & Person Detail + Fixed Numbers (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left Column: People Cards */}
-        <div className="lg:col-span-4 space-y-2">
-          {filteredPeople.map(p => {
-            const isSelected = p.personId === currentPerson.personId;
-            return (
+          {!filtered.length && (
+            <EmptyState
+              title={
+                p.people.length ? "No matching people" : "No people added yet"
+              }
+              description="Add a person to begin their Lettrology profile."
+              action={
+                <button
+                  className="secondary-button"
+                  onClick={p.onOpenNewPersonModal}
+                >
+                  Add person
+                </button>
+              }
+            />
+          )}
+        </>
+      ) : (
+        <>
+          <div className="profile-toolbar">
+            <button className="text-button" onClick={() => setSelected("")}>
+              Back to people
+            </button>
+            <div className="segmented" aria-label="Profile views">
               <button
-                key={p.personId}
-                onClick={() => setSelectedPersonId(p.personId)}
-                className={`w-full text-left p-3.5 rounded-lg border-2 transition-all flex items-start justify-between gap-2 shadow-sm ${
-                  isSelected
-                    ? 'border-amber-600 bg-amber-50/70 ring-2 ring-amber-300'
-                    : 'border-slate-300 bg-white hover:border-slate-500 hover:bg-slate-50'
-                }`}
+                aria-pressed={tab === "profile"}
+                onClick={() => setTab("profile")}
               >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-sm text-slate-950">{p.displayName}</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded border border-slate-300 bg-slate-100 text-slate-800 uppercase">
-                      {p.roleInCase}
-                    </span>
-                  </div>
-                  <div className="text-xs text-slate-700 font-mono font-bold">
-                    DOB: {p.dob} • ({p.datePrecision})
-                  </div>
-                  <div className="text-[11px] text-slate-600 font-medium truncate max-w-[240px]">
-                    Legal: {p.verifiedBirthName}
-                  </div>
-                </div>
-                <ChevronRight
-                  className={`w-5 h-5 mt-1 transition-colors ${
-                    isSelected ? 'text-amber-800' : 'text-slate-400'
-                  }`}
-                />
+                <UserRound size={18} />
+                Profile
               </button>
-            );
-          })}
-        </div>
-
-        {/* Right Column: Person Profile, 6 Fixed Numbers, Identity History */}
-        <div className="lg:col-span-8 space-y-4">
-          {/* Header Card */}
-          <div className="rounded-lg bg-white border-2 border-slate-300 p-5 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-4 pb-4 border-b-2 border-slate-200">
-              <div>
-                <div className="flex items-center gap-2.5">
-                  <h3 className="text-lg font-black text-slate-950">{currentPerson.displayName}</h3>
-                  <span className="text-xs font-bold px-2.5 py-0.5 rounded bg-emerald-100 border border-emerald-400 text-emerald-950">
-                    {currentPerson.identityVerificationState}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-700 font-medium mt-1">
-                  Full Birth Legal Name: <strong className="text-slate-950 font-bold">{currentPerson.verifiedBirthName}</strong>
-                </p>
-                {currentPerson.calledName && (
-                  <p className="text-xs text-amber-900 font-bold mt-1">
-                    Socially Used Called Name: {currentPerson.calledName.given} {currentPerson.calledName.surname}
-                  </p>
-                )}
-              </div>
-
               <button
-                onClick={() => onSelectPersonForChart(currentPerson.personId)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-100 border-2 border-amber-600 text-xs text-amber-950 font-black hover:bg-amber-200 transition-colors uppercase tracking-wider shadow-sm"
+                aria-pressed={tab === "psychology"}
+                onClick={() => setTab("psychology")}
               >
-                <LineChart className="w-4 h-4 text-amber-800" />
-                View in Time-Map
+                <Brain size={18} />
+                Psychology
               </button>
-            </div>
-
-            {/* Factual Provenance Data */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 text-xs">
-              <div className="p-3 rounded-md bg-slate-50 border-2 border-slate-200">
-                <span className="text-[11px] text-slate-700 font-bold uppercase tracking-wider block mb-0.5">
-                  Date of Birth & Source
-                </span>
-                <span className="font-mono text-slate-950 font-black text-sm">{currentPerson.dob}</span>
-                <p className="text-xs text-slate-700 mt-1 leading-snug font-medium">{currentPerson.sourceForDob}</p>
-              </div>
-
-              <div className="p-3 rounded-md bg-slate-50 border-2 border-slate-200">
-                <span className="text-[11px] text-slate-700 font-bold uppercase tracking-wider block mb-0.5">
-                  Name Provenance / Vital Record
-                </span>
-                <span className="font-black text-slate-950 text-sm">{currentPerson.verifiedBirthName}</span>
-                <p className="text-xs text-slate-700 mt-1 leading-snug font-medium">{currentPerson.sourceForName}</p>
-              </div>
+              <button
+                aria-pressed={tab === "relationships"}
+                onClick={() => setTab("relationships")}
+              >
+                <Users size={18} />
+                Connections
+              </button>
             </div>
           </div>
-
-          {/* Six Primary Fixed Numbers (PRD Section 13) */}
-          {fixedProfile && (
-            <div className="rounded-lg bg-white border-2 border-slate-300 p-5 shadow-sm space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b-2 border-slate-200">
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-950 flex items-center gap-2">
-                  <Award className="w-4 h-4 text-amber-700" />
-                  Six Primary Fixed Numbers (Canonical Core)
-                </h4>
-                <span className="text-xs font-bold text-slate-600">Base 1-9 & Full Trail Preserved</span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {/* 1. First Name */}
-                <div className="p-3.5 rounded-md bg-slate-50 border-2 border-slate-200 space-y-1">
-                  <span className="text-[11px] text-slate-700 font-bold uppercase tracking-wider block">
-                    1. First Name ({fixedProfile.firstName.spelling})
-                  </span>
-                  <div className="text-2xl font-black text-slate-950">
-                    {formatCompound(fixedProfile.firstName)}
-                  </div>
-                  <span className="text-xs text-slate-600 font-mono font-bold block">
-                    Root: {fixedProfile.firstName.root}
-                  </span>
-                </div>
-
-                {/* 2. Full Name */}
-                <div className="p-3.5 rounded-md bg-slate-50 border-2 border-slate-200 space-y-1">
-                  <span className="text-[11px] text-slate-700 font-bold uppercase tracking-wider block">
-                    2. Full Birth Name
-                  </span>
-                  <div className="text-2xl font-black text-slate-950">
-                    {formatCompound(fixedProfile.fullName)}
-                  </div>
-                  <span className="text-xs text-slate-600 font-mono font-bold block">
-                    Root: {fixedProfile.fullName.root}
-                  </span>
-                </div>
-
-                {/* 3. Vowels / Heart's Desire */}
-                <div className="p-3.5 rounded-md bg-slate-50 border-2 border-slate-200 space-y-1">
-                  <span className="text-[11px] text-slate-700 font-bold uppercase tracking-wider block">
-                    3. Vowels / Heart's Desire
-                  </span>
-                  <div className="text-2xl font-black text-purple-950">
-                    {formatCompound(fixedProfile.vowels)}
-                  </div>
-                  <span className="text-xs text-slate-600 font-mono font-bold block">
-                    Root: {fixedProfile.vowels.root}
-                  </span>
-                </div>
-
-                {/* 4. Day of Birth */}
-                <div className="p-3.5 rounded-md bg-slate-50 border-2 border-slate-200 space-y-1">
-                  <span className="text-[11px] text-slate-700 font-bold uppercase tracking-wider block">
-                    4. Day of Birth (Day {fixedProfile.dayOfBirth.calendarDay})
-                  </span>
-                  <div className="text-2xl font-black text-blue-950">
-                    {formatCompound(fixedProfile.dayOfBirth)}
-                  </div>
-                  <span className="text-xs text-slate-600 font-mono font-bold block">
-                    Root: {fixedProfile.dayOfBirth.root}
-                  </span>
-                </div>
-
-                {/* 5. Total Birth Date / Birth Force */}
-                <div className="p-3.5 rounded-md bg-slate-50 border-2 border-slate-200 space-y-1">
-                  <span className="text-[11px] text-slate-700 font-bold uppercase tracking-wider block">
-                    5. Total Birth Date / Force
-                  </span>
-                  <div className="text-2xl font-black text-blue-950">
-                    {formatCompound(fixedProfile.totalBirthDate)}
-                  </div>
-                  <span className="text-xs text-slate-600 font-mono font-bold block">
-                    Root: {fixedProfile.totalBirthDate.root}
-                  </span>
-                </div>
-
-                {/* 6. Ultimate Goal */}
-                <div className="p-3.5 rounded-md bg-slate-50 border-2 border-slate-200 space-y-1">
-                  <span className="text-[11px] text-slate-700 font-bold uppercase tracking-wider block">
-                    6. Ultimate Goal (Full+DOB)
-                  </span>
-                  <div className="text-2xl font-black text-emerald-950">
-                    {formatCompound(fixedProfile.ultimateGoal)}
-                  </div>
-                  <span className="text-xs text-slate-600 font-mono font-bold block">
-                    Root: {fixedProfile.ultimateGoal.root}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Called Name Profile (PRD Section 14) */}
-          {fixedProfile?.calledName && (
-            <div className="rounded-lg bg-white border-2 border-slate-300 p-5 shadow-sm space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b-2 border-slate-200">
-                <h4 className="text-xs font-black uppercase tracking-wider text-purple-950 flex items-center gap-2">
-                  <Compass className="w-4 h-4 text-purple-700" />
-                  Called Name Profile (How Others See You • Section 14)
-                </h4>
-                <span className="text-xs font-bold text-slate-700">
-                  {fixedProfile.calledName.calledGivenName} {fixedProfile.calledName.calledSurname}
+          {tab === "profile" && (
+            <div className="profile-layout">
+              <section className="person-summary">
+                <span className="avatar large">
+                  <UserRound size={42} />
                 </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="p-3 rounded-md bg-slate-50 border-2 border-slate-200">
-                  <span className="text-[11px] text-slate-700 font-bold uppercase tracking-wider block">
-                    Given Component
-                  </span>
-                  <div className="text-lg font-black text-slate-950">
-                    {formatCompound(fixedProfile.calledName.givenComponent)}
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-md bg-slate-50 border-2 border-slate-200">
-                  <span className="text-[11px] text-slate-700 font-bold uppercase tracking-wider block">
-                    Surname Component
-                  </span>
-                  <div className="text-lg font-black text-slate-950">
-                    {formatCompound(fixedProfile.calledName.surnameComponent)}
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-md bg-slate-50 border-2 border-slate-200">
-                  <span className="text-[11px] text-slate-700 font-bold uppercase tracking-wider block">
-                    Combined Called Name
-                  </span>
-                  <div className="text-lg font-black text-amber-900">
-                    {formatCompound(fixedProfile.calledName.combinedCalledName)}
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-md bg-slate-50 border-2 border-slate-200">
-                  <span className="text-[11px] text-slate-700 font-bold uppercase tracking-wider block">
-                    Called Ultimate Goal
-                  </span>
-                  <div className="text-lg font-black text-emerald-950">
-                    {formatCompound(fixedProfile.calledName.calledUltimateGoal)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Identity History Records Table (PRD Section 9.2) */}
-          <div className="rounded-lg bg-white border-2 border-slate-300 p-5 shadow-sm">
-            <h4 className="text-xs font-black uppercase tracking-wider text-slate-950 mb-3 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-amber-700" />
-              Immutable Identity History Records
-            </h4>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-100 text-slate-950 font-black border-b-2 border-slate-300">
-                    <th className="p-2.5">Type</th>
-                    <th className="p-2.5">Exact Name String</th>
-                    <th className="p-2.5">Socially Used</th>
-                    <th className="p-2.5">Legal Status</th>
-                    <th className="p-2.5">Verification</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {currentPerson.identities.map(id => (
-                    <tr key={id.identityId} className="hover:bg-slate-50">
-                      <td className="p-2.5 font-bold text-slate-900">{id.identityType}</td>
-                      <td className="p-2.5 font-mono font-bold text-slate-950">{id.exactNameString}</td>
-                      <td className="p-2.5 text-slate-800 font-medium">{id.sociallyUsedName}</td>
-                      <td className="p-2.5 text-slate-700">{id.legalStatus}</td>
-                      <td className="p-2.5">
-                        <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 border border-emerald-400 text-emerald-950">
-                          {id.verificationStatus}
-                        </span>
-                      </td>
-                    </tr>
+                <span className="status-badge">
+                  {humanize(person.roleInCase)}
+                </span>
+                <h2>{person.displayName}</h2>
+                <p>{person.occupation || "Occupation not recorded"}</p>
+                <dl className="detail-list">
+                  <dt>Birth name</dt>
+                  <dd>{person.verifiedBirthName}</dd>
+                  <dt>Date of birth</dt>
+                  <dd>{displayDate(person.dob)}</dd>
+                  <dt>Birth location</dt>
+                  <dd>{person.birthLocation || "Not recorded"}</dd>
+                </dl>
+                <button
+                  className="primary-button"
+                  onClick={() => p.onSelectPersonForChart(person.personId)}
+                >
+                  <LineChart size={20} />
+                  Open chart
+                </button>
+              </section>
+              <div className="profile-sections">
+                <ExpandableSection
+                  title="Identity & sources"
+                  summary="Birth details, source records and name history"
+                >
+                  <dl className="detail-list">
+                    <dt>Identity status</dt>
+                    <dd>{humanize(person.identityVerificationState)}</dd>
+                    <dt>Birth date source</dt>
+                    <dd>{person.sourceForDob}</dd>
+                    <dt>Name source</dt>
+                    <dd>{person.sourceForName}</dd>
+                    <dt>Date precision</dt>
+                    <dd>{humanize(person.datePrecision)}</dd>
+                  </dl>
+                  {person.identities.map((id) => (
+                    <div className="citation" key={id.identityId}>
+                      <strong>{id.exactNameString}</strong>
+                      <p>
+                        {humanize(id.identityType)} · {id.legalStatus}
+                      </p>
+                      <p>Used as: {id.sociallyUsedName}</p>
+                      <p>{humanize(id.verificationStatus)}</p>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </ExpandableSection>
+                <ExpandableSection
+                  title="Lettrology profile"
+                  summary="Six primary numbers and their calculation trails"
+                >
+                  <p className="interpretation-label">
+                    Lettrology interpretation framework
+                  </p>
+                  <div className="profile-values">
+                    {rows.map(([label, source, value]) => (
+                      <div key={label}>
+                        <span>
+                          <strong>{label}</strong>
+                          <small>{source}</small>
+                        </span>
+                        <strong>{formatCompound(value)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="muted">
+                    These are calculated letter and date patterns, not a
+                    psychological assessment.
+                  </p>
+                </ExpandableSection>
+                {fixed?.calledName && (
+                  <ExpandableSection
+                    title="Called name"
+                    summary={`${fixed.calledName.calledGivenName} ${fixed.calledName.calledSurname}`}
+                  >
+                    <div className="profile-values">
+                      {[
+                        ["Given component", fixed.calledName.givenComponent],
+                        [
+                          "Surname component",
+                          fixed.calledName.surnameComponent,
+                        ],
+                        [
+                          "Combined called name",
+                          fixed.calledName.combinedCalledName,
+                        ],
+                        [
+                          "Called ultimate goal",
+                          fixed.calledName.calledUltimateGoal,
+                        ],
+                      ].map(([label, v]) => (
+                        <div key={label as string}>
+                          <span>{label as string}</span>
+                          <strong>{formatCompound(v as any)}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </ExpandableSection>
+                )}
+                <ExpandableSection
+                  title="Case notes"
+                  summary={
+                    person.notes
+                      ? "Read the notes attached to this person."
+                      : "No notes have been recorded."
+                  }
+                >
+                  <p>{person.notes || "No notes have been recorded."}</p>
+                </ExpandableSection>
+                <ExpandableSection
+                  title="Major life events"
+                  summary={`${linkedEvents.length} events linked to this person`}
+                >
+                  {linkedEvents.map((e) => (
+                    <div className="citation" key={e.eventId}>
+                      <strong>{e.title}</strong>
+                      <p>{displayDate(e.startDate)}</p>
+                    </div>
+                  ))}
+                  {!linkedEvents.length && <p>No events linked yet.</p>}
+                  <button className="text-button" onClick={p.onOpenTimeline}>
+                    Explore timeline
+                    <ArrowRight size={18} />
+                  </button>
+                </ExpandableSection>
+                <ExpandableSection
+                  title="Related sources"
+                  summary={`${linkedEvidence.length} evidence records`}
+                >
+                  {linkedEvidence.map((e) => (
+                    <div className="citation" key={e.evidenceId}>
+                      <strong>{e.title}</strong>
+                      <p>{e.sourcePublisher}</p>
+                    </div>
+                  ))}
+                  {!linkedEvidence.length && (
+                    <p>No evidence records linked yet.</p>
+                  )}
+                  <button className="text-button" onClick={p.onOpenEvidence}>
+                    Open evidence
+                    <ArrowRight size={18} />
+                  </button>
+                </ExpandableSection>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
+          )}
+          {tab === "psychology" && (
+            <section className="reading-surface">
+              <p className="eyebrow">Behavioral research</p>
+              <h2>Explore the person with context</h2>
+              <p>
+                Open a domain to review what is available. This case does not
+                yet contain sourced assessments for these domains.
+              </p>
+              {[
+                "Positive expression",
+                "Shadow expression",
+                "Core traits",
+                "Emotional drivers",
+                "Communication style",
+                "Relationship style",
+                "Stress response",
+                "Motivations",
+                "Life direction",
+              ].map((domain) => (
+                <ExpandableSection
+                  key={domain}
+                  title={domain}
+                  summary="No sourced assessment recorded"
+                >
+                  <p>
+                    <strong>Documented evidence:</strong> No domain-specific
+                    assessment has been recorded.
+                  </p>
+                  <p>
+                    <strong>Lettrology interpretation:</strong> Review the
+                    person’s chart before adding an interpretation.
+                  </p>
+                  <p>
+                    <strong>Research hypothesis:</strong> No hypothesis recorded
+                    for this domain.
+                  </p>
+                  <button
+                    className="text-button"
+                    onClick={() => p.onSelectPersonForChart(person.personId)}
+                  >
+                    Review chart
+                    <ArrowRight size={18} />
+                  </button>
+                </ExpandableSection>
+              ))}
+            </section>
+          )}
+          {tab === "relationships" && (
+            <section className="reading-surface">
+              <p className="eyebrow">Recorded connections</p>
+              <h2>People in shared events</h2>
+              <p>
+                Connections below mean the people appear in the same event
+                record. A family or personal relationship has not been inferred.
+              </p>
+              {p.people
+                .filter(
+                  (x) =>
+                    x.personId !== person.personId &&
+                    linkedEvents.some((e) =>
+                      e.peopleInvolved.includes(x.personId),
+                    ),
+                )
+                .map((x) => (
+                  <button
+                    className="trail-record"
+                    key={x.personId}
+                    onClick={() => {
+                      setSelected(x.personId);
+                      setTab("profile");
+                    }}
+                  >
+                    <UserRound size={24} />
+                    <span>
+                      <strong>{x.displayName}</strong>
+                      <small>
+                        Mentioned in{" "}
+                        {
+                          linkedEvents.filter((e) =>
+                            e.peopleInvolved.includes(x.personId),
+                          ).length
+                        }{" "}
+                        shared events
+                      </small>
+                    </span>
+                    <ArrowRight size={20} />
+                  </button>
+                ))}
+              {!p.people.some(
+                (x) =>
+                  x.personId !== person.personId &&
+                  linkedEvents.some((e) =>
+                    e.peopleInvolved.includes(x.personId),
+                  ),
+              ) && <p>No shared event connections have been recorded.</p>}
+            </section>
+          )}
+          <FollowTrail
+            items={[
+              { label: "What happened next?", action: p.onOpenTimeline },
+              { label: "What sources support this?", action: p.onOpenEvidence },
+            ]}
+          />
+        </>
+      )}
     </div>
   );
-};
+}

@@ -1,48 +1,66 @@
-/**
- * @license
- * Lettrology Forensic Science - Global Header & Navigation
- * PRD Section 3, 5, 6
- */
-
-import React from 'react';
+import React, { useEffect, useRef, useState } from "react";
 import {
-  FolderKanban,
+  Home,
   Users,
-  Crosshair,
+  Route,
   CalendarDays,
   LineChart,
-  FileCheck2,
   FileText,
-  Image as ImageIcon,
-  HelpCircle,
-  Database,
+  Image,
   Printer,
-  ShieldCheck,
-  EyeOff,
   Search,
   Plus,
-  AlertTriangle,
   ChevronDown,
   Compass,
-} from 'lucide-react';
-import { UserProfile, CaseRecord } from '../types.ts';
-import { CURRENT_ENGINE_VERSION } from '../core/lettrology-engine/methodologyVersion.ts';
+  Settings2,
+  Menu,
+  X,
+  FolderOpen,
+  Crosshair,
+  FileCheck2,
+  HelpCircle,
+  Database,
+  ShieldCheck,
+  EyeOff,
+  Sun,
+  Moon,
+} from "lucide-react";
+import { UserProfile, CaseRecord } from "../types";
 
 export type NavTab =
-  | 'CASES'
-  | 'PEOPLE'
-  | 'ANALYSIS'
-  | 'CHRONOLOGY'
-  | 'CHART'
-  | 'EVIDENCE'
-  | 'DOCUMENTS'
-  | 'MEDIA'
-  | 'HYPOTHESES'
-  | 'RESEARCH'
-  | 'REPORTS'
-  | 'METHODOLOGY'
-  | 'BLIND';
-
+  | "HOME"
+  | "TRAIL"
+  | "CASES"
+  | "PEOPLE"
+  | "ANALYSIS"
+  | "CHRONOLOGY"
+  | "CHART"
+  | "EVIDENCE"
+  | "DOCUMENTS"
+  | "MEDIA"
+  | "HYPOTHESES"
+  | "RESEARCH"
+  | "REPORTS"
+  | "METHODOLOGY"
+  | "BLIND";
+export type ReadingSize = "normal" | "large" | "xlarge";
+export const PAGE_NAMES: Record<NavTab, string> = {
+  HOME: "Investigation Hub",
+  CASES: "Cases",
+  TRAIL: "Case Trail",
+  PEOPLE: "People",
+  ANALYSIS: "Pattern Analysis",
+  CHRONOLOGY: "Timeline",
+  CHART: "Lettrology Chart",
+  EVIDENCE: "Evidence",
+  DOCUMENTS: "Documents",
+  MEDIA: "Media",
+  HYPOTHESES: "Open Questions",
+  RESEARCH: "Research",
+  REPORTS: "Reports",
+  METHODOLOGY: "Methodology",
+  BLIND: "Blind Study",
+};
 interface HeaderProps {
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
@@ -58,436 +76,289 @@ interface HeaderProps {
   onOpenTutorial: () => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-  fontScale?: 'normal' | 'large' | 'xlarge';
-  onSetFontScale?: (scale: 'normal' | 'large' | 'xlarge') => void;
+  fontScale: ReadingSize;
+  onSetFontScale: (s: ReadingSize) => void;
+  theme: "dark" | "light";
+  onSetTheme: (theme: "dark" | "light") => void;
 }
-
-export const Header: React.FC<HeaderProps> = ({
-  activeTab,
-  setActiveTab,
-  currentUser,
-  allUsers,
-  setCurrentUser,
-  activeCase,
-  allCases,
-  setActiveCase,
-  onOpenNewCaseModal,
-  onOpenNewPersonModal,
-  onOpenNewEventModal,
-  onOpenTutorial,
-  searchQuery,
-  setSearchQuery,
-  fontScale = 'large',
-  onSetFontScale,
-}) => {
-  const [showCaseDropdown, setShowCaseDropdown] = React.useState(false);
-  const [showUserDropdown, setShowUserDropdown] = React.useState(false);
-  const [showQuickAddDropdown, setShowQuickAddDropdown] = React.useState(false);
-
+const mainItems: { id: NavTab; icon: typeof Home; label: string }[] = [
+  { id: "HOME", icon: Home, label: "Home" },
+  { id: "CASES", icon: FolderOpen, label: "Cases" },
+  { id: "TRAIL", icon: Route, label: "Case Trail" },
+  { id: "PEOPLE", icon: Users, label: "People" },
+  { id: "CHRONOLOGY", icon: CalendarDays, label: "Timeline" },
+  { id: "CHART", icon: LineChart, label: "Chart" },
+  { id: "DOCUMENTS", icon: FileText, label: "Documents" },
+  { id: "MEDIA", icon: Image, label: "Media" },
+  { id: "REPORTS", icon: Printer, label: "Reports" },
+];
+const extraItems: { id: NavTab; icon: typeof Home }[] = [
+  { id: "ANALYSIS", icon: Crosshair },
+  { id: "EVIDENCE", icon: FileCheck2 },
+  { id: "HYPOTHESES", icon: HelpCircle },
+  { id: "RESEARCH", icon: Database },
+  { id: "BLIND", icon: EyeOff },
+  { id: "METHODOLOGY", icon: ShieldCheck },
+];
+export function Header(p: HeaderProps) {
+  const [menu, setMenu] = useState<"reading" | "add" | "user" | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [more, setMore] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const close = (e: PointerEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setMenu(null);
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMenu(null);
+        setMobileOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", key);
+    };
+  }, []);
+  const go = (id: NavTab) => {
+    p.setActiveTab(id);
+    setMobileOpen(false);
+  };
+  const toggle = (name: typeof menu) => setMenu(menu === name ? null : name);
   return (
-    <header className="border-b-2 border-slate-300 bg-white sticky top-0 z-40 shadow-sm text-slate-950">
-      {/* Top Utility & Brand Bar */}
-      <div className="max-w-[1700px] mx-auto px-4 py-2.5 flex flex-wrap items-center justify-between gap-4">
-        {/* Brand & Wordmark */}
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-md border-2 border-amber-600 bg-amber-50 flex items-center justify-center text-amber-900 shadow-sm font-black text-base tracking-wider">
-            LFS
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-black tracking-[0.15em] text-slate-950 uppercase">
-                LETTROLOGY FORENSIC SCIENCE
-              </h1>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded border border-amber-500 bg-amber-100 text-amber-950 tracking-wider uppercase">
-                {CURRENT_ENGINE_VERSION}
-              </span>
-            </div>
-            <p className="text-xs text-slate-600 font-medium tracking-wide uppercase">
-              Deterministic Criminology & Time-Map Research Platform
-            </p>
-          </div>
-        </div>
-
-        {/* Active Case Selector */}
-        <div className="relative">
-          <button
-            onClick={() => setShowCaseDropdown(!showCaseDropdown)}
-            className="flex items-center gap-2.5 px-3 py-1.5 rounded border-2 border-slate-300 bg-slate-50 hover:bg-white hover:border-slate-800 transition-colors text-left text-xs shadow-sm"
-          >
-            <FolderKanban className="w-4 h-4 text-amber-700" />
-            <div>
-              <span className="text-[10px] text-slate-600 block uppercase font-bold tracking-wider">
-                Case: {activeCase.caseNumber}
-              </span>
-              <span className="font-bold text-slate-950 max-w-[260px] truncate block text-xs">
-                {activeCase.title}
-              </span>
-            </div>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-700 ml-1" />
-          </button>
-
-          {showCaseDropdown && (
-            <div className="absolute top-full left-0 mt-1 w-80 rounded-md border-2 border-slate-300 bg-white shadow-2xl py-1 z-50 text-slate-950">
-              <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200 bg-slate-50">
-                Switch Active Case
-              </div>
-              {allCases.map(c => (
-                <button
-                  key={c.caseId}
-                  onClick={() => {
-                    setActiveCase(c);
-                    setShowCaseDropdown(false);
-                  }}
-                  className={`w-full px-3 py-2 text-left hover:bg-amber-50 text-xs flex flex-col gap-0.5 transition-colors border-b border-slate-100 ${
-                    c.caseId === activeCase.caseId ? 'bg-amber-100/60 font-bold border-l-4 border-l-amber-600' : ''
-                  }`}
-                >
-                  <span className="font-bold text-slate-950">{c.title}</span>
-                  <span className="text-[11px] text-slate-600">
-                    {c.caseNumber} • {c.status}
-                  </span>
-                </button>
-              ))}
-              <div className="p-2 border-t border-slate-200 bg-slate-50">
-                <button
-                  onClick={() => {
-                    setShowCaseDropdown(false);
-                    onOpenNewCaseModal();
-                  }}
-                  className="w-full text-center py-1.5 text-xs text-slate-950 font-bold border-2 border-slate-800 hover:bg-slate-900 hover:text-white rounded transition-colors uppercase tracking-wider"
-                >
-                  + Create New Case
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Global Search & Quick Actions */}
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-500 absolute left-2.5 top-2.5" />
-            <input
-              type="text"
-              placeholder="Search case, person, marker..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="pl-8 pr-3 py-1.5 rounded text-xs bg-white border-2 border-slate-300 focus:border-slate-900 text-slate-950 placeholder:text-slate-500 w-48 sm:w-56 focus:w-64 transition-all focus:outline-none font-medium shadow-sm"
-            />
-          </div>
-
-          {/* Senior Text Size Accessibility Selector */}
-          {onSetFontScale && (
-            <div className="flex items-center border-2 border-slate-300 rounded bg-slate-100 p-0.5 text-xs">
-              <button
-                onClick={() => onSetFontScale('normal')}
-                className={`px-2 py-0.5 rounded font-bold transition-colors ${
-                  fontScale === 'normal' ? 'bg-white text-black shadow-sm' : 'text-slate-600 hover:text-black'
-                }`}
-                title="Normal text size"
-              >
-                A
-              </button>
-              <button
-                onClick={() => onSetFontScale('large')}
-                className={`px-2 py-0.5 rounded font-bold text-[13px] transition-colors ${
-                  fontScale === 'large' ? 'bg-white text-black shadow-sm' : 'text-slate-600 hover:text-black'
-                }`}
-                title="Large text size (Easier to read)"
-              >
-                A+
-              </button>
-              <button
-                onClick={() => onSetFontScale('xlarge')}
-                className={`px-2 py-0.5 rounded font-bold text-sm transition-colors ${
-                  fontScale === 'xlarge' ? 'bg-white text-black shadow-sm' : 'text-slate-600 hover:text-black'
-                }`}
-                title="Extra Large text size"
-              >
-                A++
-              </button>
-            </div>
-          )}
-
-          {/* Quick-Add Button */}
-          <div className="relative">
+    <>
+      <a className="skip-link" href="#main-content">
+        Skip to workspace
+      </a>
+      <aside
+        className={`app-sidebar no-print ${mobileOpen ? "is-open" : ""}`}
+        aria-label="Application sidebar"
+      >
+        <button
+          className="brand"
+          onClick={() => go("HOME")}
+          aria-label="Forensic Lettrology home"
+        >
+          <Route size={29} />
+          <span>
+            Forensic
+            <br />
+            <strong>Lettrology</strong>
+          </span>
+        </button>
+        <div className="sidebar-section-label">Workspace</div>
+        <nav aria-label="Main navigation">
+          {mainItems.map(({ id, icon: Icon, label }) => (
             <button
-              onClick={() => setShowQuickAddDropdown(!showQuickAddDropdown)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded text-xs bg-slate-100 border-2 border-slate-300 hover:border-slate-800 text-slate-900 font-bold transition-colors shadow-sm"
+              key={id}
+              className={`nav-item ${p.activeTab === id ? "is-active" : ""}`}
+              onClick={() => go(id)}
+              aria-current={p.activeTab === id ? "page" : undefined}
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span className="tracking-wider uppercase">Add</span>
+              <Icon size={21} />
+              <span>{label}</span>
             </button>
-            {showQuickAddDropdown && (
-              <div className="absolute right-0 top-full mt-1 w-48 rounded-md border-2 border-slate-300 bg-white shadow-xl py-1 z-50 text-xs font-semibold text-slate-900">
-                <button
-                  onClick={() => {
-                    setShowQuickAddDropdown(false);
-                    onOpenNewCaseModal();
-                  }}
-                  className="w-full px-3 py-2 text-left hover:bg-slate-100"
+          ))}
+        </nav>
+        <button
+          className="nav-item more-toggle"
+          onClick={() => setMore(!more)}
+          aria-expanded={more}
+        >
+          <Settings2 size={21} />
+          <span>More tools</span>
+          <ChevronDown size={17} />
+        </button>
+        {(more || extraItems.some((x) => x.id === p.activeTab)) && (
+          <nav className="extra-navigation" aria-label="Research tools">
+            {extraItems.map(({ id, icon: Icon }) => (
+              <button
+                className={`nav-item ${p.activeTab === id ? "is-active" : ""}`}
+                key={id}
+                onClick={() => go(id)}
+                aria-current={p.activeTab === id ? "page" : undefined}
+              >
+                <Icon size={19} />
+                <span>{PAGE_NAMES[id]}</span>
+              </button>
+            ))}
+          </nav>
+        )}
+        <div className="sidebar-footer">
+          <button className="nav-item" onClick={p.onOpenTutorial}>
+            <Compass size={21} />
+            <span>Guided tour</span>
+          </button>
+          <p>
+            Follow the evidence.
+            <br />
+            Explore the patterns.
+          </p>
+        </div>
+      </aside>
+      {mobileOpen && (
+        <button
+          className="sidebar-scrim"
+          aria-label="Close navigation"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+      <header className="app-topbar no-print" ref={ref}>
+        <button
+          className="icon-button mobile-menu"
+          aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+          aria-expanded={mobileOpen}
+          onClick={() => setMobileOpen(!mobileOpen)}
+        >
+          {mobileOpen ? <X /> : <Menu />}
+        </button>
+        <div className="breadcrumb">
+          <span>Workspace</span>
+          <ChevronDown size={13} className="breadcrumb-arrow" />
+          <strong>{PAGE_NAMES[p.activeTab]}</strong>
+        </div>
+        <div className="topbar-actions">
+          <div className="popover-anchor">
+            <button
+              className="quiet-button"
+              onClick={() => toggle("reading")}
+              aria-expanded={menu === "reading"}
+            >
+              <Settings2 size={19} />
+              <span>Reading</span>
+            </button>
+            {menu === "reading" && (
+              <section
+                className="utility-popover"
+                aria-label="Reading preferences"
+              >
+                <h3>Reading comfort</h3>
+                <label htmlFor="text-size">Text size</label>
+                <select
+                  id="text-size"
+                  value={p.fontScale}
+                  onChange={(e) =>
+                    p.onSetFontScale(e.target.value as ReadingSize)
+                  }
                 >
-                  + New Case
-                </button>
-                <button
-                  onClick={() => {
-                    setShowQuickAddDropdown(false);
-                    onOpenNewPersonModal();
-                  }}
-                  className="w-full px-3 py-2 text-left hover:bg-slate-100"
-                >
-                  + New Subject
-                </button>
-                <button
-                  onClick={() => {
-                    setShowQuickAddDropdown(false);
-                    onOpenNewEventModal();
-                  }}
-                  className="w-full px-3 py-2 text-left hover:bg-slate-100"
-                >
-                  + New Chronology Event
-                </button>
+                  <option value="normal">Standard</option>
+                  <option value="large">Large — recommended</option>
+                  <option value="xlarge">Extra large</option>
+                </select>
+                <label>Appearance</label>
+                <div className="segmented">
+                  <button
+                    aria-pressed={p.theme === "dark"}
+                    onClick={() => p.onSetTheme("dark")}
+                  >
+                    <Moon size={17} />
+                    Dark
+                  </button>
+                  <button
+                    aria-pressed={p.theme === "light"}
+                    onClick={() => p.onSetTheme("light")}
+                  >
+                    <Sun size={17} />
+                    Light
+                  </button>
+                </div>
+                <p className="muted">
+                  Your reading preferences are remembered.
+                </p>
+              </section>
+            )}
+          </div>
+          <div className="popover-anchor">
+            <button
+              className="quiet-button"
+              onClick={() => toggle("add")}
+              aria-expanded={menu === "add"}
+            >
+              <Plus size={20} />
+              <span>Add</span>
+            </button>
+            {menu === "add" && (
+              <div className="utility-popover compact">
+                {[
+                  ["New case", p.onOpenNewCaseModal],
+                  ["New person", p.onOpenNewPersonModal],
+                  ["New event", p.onOpenNewEventModal],
+                ].map(([label, action]) => (
+                  <button
+                    key={label as string}
+                    onClick={() => {
+                      setMenu(null);
+                      (action as () => void)();
+                    }}
+                  >
+                    {label as string}
+                  </button>
+                ))}
               </div>
             )}
           </div>
-
-          {/* Interactive Tutorial Button */}
-          <button
-            onClick={onOpenTutorial}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs bg-amber-100 border-2 border-amber-600 hover:bg-amber-200 text-amber-950 font-bold transition-all shadow-sm group hover:scale-[1.02]"
-            title="Start Interactive Guided Tour"
-          >
-            <Compass className="w-4 h-4 group-hover:rotate-45 transition-transform text-amber-800" />
-            <span className="tracking-wider uppercase">Interactive Tutorial</span>
-          </button>
-
-          {/* User Role Switcher */}
-          <div className="relative">
+          <div className="popover-anchor">
             <button
-              onClick={() => setShowUserDropdown(!showUserDropdown)}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded border-2 border-slate-300 bg-slate-50 hover:border-slate-800 text-xs text-slate-900 font-bold shadow-sm"
+              className="account-button"
+              onClick={() => toggle("user")}
+              aria-expanded={menu === "user"}
+              aria-label="Choose researcher"
             >
-              <div className="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold">
-                {currentUser.name[0]}
-              </div>
-              <div className="text-left hidden sm:block">
-                <span className="text-[11px] font-bold text-slate-950 block leading-tight">
-                  {currentUser.name}
-                </span>
-                <span className="text-[9px] text-slate-600 block uppercase tracking-tight font-semibold">
-                  {currentUser.role.split('–')[0].trim()}
-                </span>
-              </div>
-              <ChevronDown className="w-3 h-3 text-slate-600 ml-1" />
+              <span className="avatar small">
+                {p.currentUser.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")}
+              </span>
+              <span className="account-name">
+                {p.currentUser.name.split(" ")[0]}
+              </span>
+              <ChevronDown size={14} />
             </button>
-
-            {showUserDropdown && (
-              <div className="absolute right-0 top-full mt-1 w-64 rounded-md border-2 border-slate-300 bg-white shadow-2xl py-1 z-50">
-                <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-slate-700 font-bold border-b border-slate-200 bg-slate-50">
-                  Switch Role / Persona (PRD §5)
-                </div>
-                {allUsers.map(u => (
+            {menu === "user" && (
+              <div className="utility-popover compact">
+                <h3>Researcher</h3>
+                {p.allUsers.map((u) => (
                   <button
                     key={u.userId}
                     onClick={() => {
-                      setCurrentUser(u);
-                      setShowUserDropdown(false);
+                      p.setCurrentUser(u);
+                      setMenu(null);
                     }}
-                    className={`w-full px-3 py-2 text-left hover:bg-slate-100 text-xs transition-colors border-b border-slate-100 ${
-                      u.userId === currentUser.userId
-                        ? 'bg-amber-100 text-amber-950 font-bold border-l-4 border-l-amber-600'
-                        : 'text-slate-900'
-                    }`}
                   >
-                    <div className="font-bold">{u.name}</div>
-                    <div className="text-[10px] text-slate-600">{u.role}</div>
+                    {u.name}
+                    <small>{u.role}</small>
                   </button>
                 ))}
               </div>
             )}
           </div>
         </div>
-      </div>
-
-      {/* Global Navigation Bar */}
-      <div className="border-t-2 border-slate-200 bg-slate-100">
-        <div className="max-w-[1700px] mx-auto px-4 flex items-center justify-between overflow-x-auto no-scrollbar">
-          <nav className="flex items-center gap-1 py-1.5 text-xs">
-            <button
-              onClick={() => setActiveTab('CASES')}
-              className={`px-3 py-2 rounded flex items-center gap-1.5 font-bold transition-all uppercase tracking-wider whitespace-nowrap ${
-                activeTab === 'CASES'
-                  ? 'bg-white text-slate-950 border-b-2 border-slate-950 shadow-sm'
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200'
-              }`}
-            >
-              <FolderKanban className="w-4 h-4" />
-              Cases
-            </button>
-
-            <button
-              onClick={() => setActiveTab('PEOPLE')}
-              className={`px-3 py-2 rounded flex items-center gap-1.5 font-bold transition-all uppercase tracking-wider whitespace-nowrap ${
-                activeTab === 'PEOPLE'
-                  ? 'bg-white text-slate-950 border-b-2 border-slate-950 shadow-sm'
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              People
-            </button>
-
-            <button
-              onClick={() => setActiveTab('ANALYSIS')}
-              className={`px-3 py-2 rounded flex items-center gap-1.5 font-bold transition-all uppercase tracking-wider whitespace-nowrap ${
-                activeTab === 'ANALYSIS'
-                  ? 'bg-white text-slate-950 border-b-2 border-slate-950 shadow-sm'
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200'
-              }`}
-            >
-              <Crosshair className="w-4 h-4" />
-              Analysis
-            </button>
-
-            <button
-              onClick={() => setActiveTab('CHRONOLOGY')}
-              className={`px-3 py-2 rounded flex items-center gap-1.5 font-bold transition-all uppercase tracking-wider whitespace-nowrap ${
-                activeTab === 'CHRONOLOGY'
-                  ? 'bg-white text-slate-950 border-b-2 border-slate-950 shadow-sm'
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200'
-              }`}
-            >
-              <CalendarDays className="w-4 h-4" />
-              Chronology
-            </button>
-
-            <button
-              onClick={() => setActiveTab('CHART')}
-              className={`px-3 py-2 rounded flex items-center gap-1.5 font-bold transition-all uppercase tracking-wider whitespace-nowrap ${
-                activeTab === 'CHART'
-                  ? 'bg-white text-amber-950 border-b-2 border-amber-600 shadow-sm ring-1 ring-amber-300'
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200'
-              }`}
-            >
-              <LineChart className="w-4 h-4 text-amber-700" />
-              <span className="text-slate-950 font-black">Time-Map Chart</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('EVIDENCE')}
-              className={`px-3 py-2 rounded flex items-center gap-1.5 font-bold transition-all uppercase tracking-wider whitespace-nowrap ${
-                activeTab === 'EVIDENCE'
-                  ? 'bg-white text-slate-950 border-b-2 border-slate-950 shadow-sm'
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200'
-              }`}
-            >
-              <FileCheck2 className="w-4 h-4" />
-              Evidence
-            </button>
-
-            <button
-              onClick={() => setActiveTab('DOCUMENTS')}
-              className={`px-3 py-2 rounded flex items-center gap-1.5 font-bold transition-all uppercase tracking-wider whitespace-nowrap ${
-                activeTab === 'DOCUMENTS'
-                  ? 'bg-white text-slate-950 border-b-2 border-slate-950 shadow-sm'
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200'
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              Documents
-            </button>
-
-            <button
-              onClick={() => setActiveTab('MEDIA')}
-              className={`px-3 py-2 rounded flex items-center gap-1.5 font-bold transition-all uppercase tracking-wider whitespace-nowrap ${
-                activeTab === 'MEDIA'
-                  ? 'bg-white text-slate-950 border-b-2 border-slate-950 shadow-sm'
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200'
-              }`}
-            >
-              <ImageIcon className="w-4 h-4" />
-              Media
-            </button>
-
-            <button
-              onClick={() => setActiveTab('HYPOTHESES')}
-              className={`px-3 py-2 rounded flex items-center gap-1.5 font-bold transition-all uppercase tracking-wider whitespace-nowrap ${
-                activeTab === 'HYPOTHESES'
-                  ? 'bg-white text-slate-950 border-b-2 border-slate-950 shadow-sm'
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200'
-              }`}
-            >
-              <HelpCircle className="w-4 h-4" />
-              Hypotheses
-            </button>
-
-            <button
-              onClick={() => setActiveTab('RESEARCH')}
-              className={`px-3 py-2 rounded flex items-center gap-1.5 font-bold transition-all uppercase tracking-wider whitespace-nowrap ${
-                activeTab === 'RESEARCH'
-                  ? 'bg-white text-slate-950 border-b-2 border-slate-950 shadow-sm'
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200'
-              }`}
-            >
-              <Database className="w-4 h-4" />
-              Research
-            </button>
-
-            <button
-              onClick={() => setActiveTab('REPORTS')}
-              className={`px-3 py-2 rounded flex items-center gap-1.5 font-bold transition-all uppercase tracking-wider whitespace-nowrap ${
-                activeTab === 'REPORTS'
-                  ? 'bg-white text-slate-950 border-b-2 border-slate-950 shadow-sm'
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200'
-              }`}
-            >
-              <Printer className="w-4 h-4" />
-              Reports
-            </button>
-
-            <button
-              onClick={() => setActiveTab('BLIND')}
-              className={`px-3 py-2 rounded flex items-center gap-1.5 font-bold transition-all uppercase tracking-wider whitespace-nowrap ${
-                activeTab === 'BLIND'
-                  ? 'bg-white text-slate-950 border-b-2 border-slate-950 shadow-sm'
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200'
-              }`}
-            >
-              <EyeOff className="w-4 h-4" />
-              Blind Study
-            </button>
-
-            <button
-              onClick={() => setActiveTab('METHODOLOGY')}
-              className={`px-3 py-2 rounded flex items-center gap-1.5 font-bold transition-all uppercase tracking-wider whitespace-nowrap ${
-                activeTab === 'METHODOLOGY'
-                  ? 'bg-white text-emerald-950 border-b-2 border-emerald-600 shadow-sm ring-1 ring-emerald-300'
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200'
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4 text-emerald-700" />
-              <span className="text-emerald-950 font-bold">Methodology & Peer Review</span>
-            </button>
-          </nav>
-
-          <div className="flex items-center gap-2 py-1">
-            <button
-              onClick={onOpenTutorial}
-              className="flex items-center gap-1.5 text-xs font-bold text-amber-950 hover:bg-amber-200 px-3 py-1 rounded bg-amber-100 border-2 border-amber-500 transition-colors whitespace-nowrap uppercase tracking-wider shadow-sm"
-              title="Launch Interactive Step-by-Step Tutorial"
-            >
-              <Compass className="w-4 h-4 text-amber-800" />
-              <span>Interactive Tour</span>
-            </button>
-
-            {/* Absolute Rule 7 & 15 Reinforcement Badge */}
-            <div className="hidden lg:flex items-center gap-1.5 text-xs font-bold text-amber-900 bg-amber-50 px-2.5 py-1 rounded border border-amber-300 whitespace-nowrap">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-              <span>Pattern Research Is Not Forensic Proof</span>
-            </div>
-          </div>
+      </header>
+      {!["HOME", "CASES"].includes(p.activeTab) && (
+        <div className="case-context no-print">
+          <label htmlFor="active-case">Current case</label>
+          <select
+            id="active-case"
+            value={p.activeCase.caseId}
+            onChange={(e) => {
+              const c = p.allCases.find((c) => c.caseId === e.target.value);
+              if (c) p.setActiveCase(c);
+            }}
+          >
+            {p.allCases.map((c) => (
+              <option key={c.caseId} value={c.caseId}>
+                {c.title}
+              </option>
+            ))}
+          </select>
+          <button className="text-button" onClick={() => go("CASES")}>
+            All cases
+          </button>
         </div>
-      </div>
-    </header>
+      )}
+    </>
   );
-};
+}
