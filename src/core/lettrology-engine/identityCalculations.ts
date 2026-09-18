@@ -14,8 +14,8 @@ import {
 import {
   reduceWithTrail,
   CompoundValue,
-  formatCompound,
 } from './compoundTrail.ts';
+import { parseHistoricalDate } from '../historicalDate.ts';
 
 export interface PrimaryFixedProfile {
   firstName: CompoundValue & { spelling: string };
@@ -45,11 +45,9 @@ export interface CalledNameProfile {
 
 /**
  * Calculates the six primary fixed numbers for an individual from their
- * verified birth name and date of birth.
- *
- * @param birthName Full legal/birth name (e.g. "Elon Reeve Musk")
- * @param dob Date of birth in YYYY-MM-DD or DD-MM-YYYY format
- * @param calledName Optional socially used name (e.g. "Elon Musk" or "Bob Smith")
+ * verified birth name and date of birth. Historical BC/BCE dates use the
+ * same visible year digits as their source date; the era label itself is not
+ * added to the digit sum.
  */
 export function calculatePrimaryProfile(
   birthName: string,
@@ -60,25 +58,18 @@ export function calculatePrimaryProfile(
   const firstNameStr = parts[0] || '';
   const fullNameStr = parts.join(' ');
 
-  // 1. First Name (base 1-9 values)
   let firstNameRaw = 0;
-  for (const ch of cleanAlphaString(firstNameStr)) {
-    firstNameRaw += getBaseLetterValue(ch);
-  }
+  for (const ch of cleanAlphaString(firstNameStr)) firstNameRaw += getBaseLetterValue(ch);
   const firstNameComp = reduceWithTrail(firstNameRaw, {
     rawFormula: `Base 1-9 sum of "${firstNameStr}" = ${firstNameRaw}`,
   });
 
-  // 2. Full Name (base 1-9 values across all parts)
   let fullNameRaw = 0;
-  for (const ch of cleanAlphaString(fullNameStr)) {
-    fullNameRaw += getBaseLetterValue(ch);
-  }
+  for (const ch of cleanAlphaString(fullNameStr)) fullNameRaw += getBaseLetterValue(ch);
   const fullNameComp = reduceWithTrail(fullNameRaw, {
     rawFormula: `Base 1-9 sum of all words in "${fullNameStr}" = ${fullNameRaw}`,
   });
 
-  // 3. Vowels / Heart's Desire (A, E, I, O, U in full name)
   let vowelsRaw = 0;
   const vowelList: string[] = [];
   for (const ch of cleanAlphaString(fullNameStr)) {
@@ -91,49 +82,29 @@ export function calculatePrimaryProfile(
     rawFormula: `Vowels (${vowelList.join('+')}) = ${vowelsRaw}`,
   });
 
-  // 4. Day of Birth
-  // Parse date components safely
-  let dayNum = 1;
-  let monthNum = 1;
-  let yearNum = 1970;
-
-  if (dob.includes('-')) {
-    const segments = dob.split('-');
-    if (segments[0].length === 4) {
-      // YYYY-MM-DD
-      yearNum = parseInt(segments[0], 10);
-      monthNum = parseInt(segments[1], 10);
-      dayNum = parseInt(segments[2], 10);
-    } else {
-      // DD-MM-YYYY
-      dayNum = parseInt(segments[0], 10);
-      monthNum = parseInt(segments[1], 10);
-      yearNum = parseInt(segments[2], 10);
-    }
-  }
+  const parsedDob = parseHistoricalDate(dob);
+  const dayNum = parsedDob?.day ?? 1;
+  const monthNum = parsedDob?.month ?? 1;
+  const yearNum = parsedDob?.year ?? 1970;
 
   const dayComp = reduceWithTrail(dayNum, {
     rawFormula: `Calendar Day = ${dayNum}`,
   });
 
-  // 5. Total Birth Date / Birth Force
-  // Add every single digit of the complete DOB
-  const dobDigits = `${dayNum.toString().padStart(2, '0')}${monthNum.toString().padStart(2, '0')}${yearNum.toString()}`;
+  // Preserve four visible year places for ancient dates. Leading zeroes do not
+  // change the sum but keep the formula readable (e.g. 0044 BC).
+  const dobDigits = `${dayNum.toString().padStart(2, '0')}${monthNum.toString().padStart(2, '0')}${yearNum.toString().padStart(4, '0')}`;
   let totalBirthDateRaw = 0;
-  for (const d of dobDigits) {
-    totalBirthDateRaw += parseInt(d, 10);
-  }
+  for (const d of dobDigits) totalBirthDateRaw += parseInt(d, 10);
   const totalBirthDateComp = reduceWithTrail(totalBirthDateRaw, {
     rawFormula: `Sum of DOB digits (${dobDigits.split('').join('+')}) = ${totalBirthDateRaw}`,
   });
 
-  // 6. Ultimate Goal: raw Full Birth Name total + raw Total Birth Date total
   const ultimateGoalRaw = fullNameRaw + totalBirthDateRaw;
   const ultimateGoalComp = reduceWithTrail(ultimateGoalRaw, {
     rawFormula: `Full Name raw (${fullNameRaw}) + Birth Date raw (${totalBirthDateRaw}) = ${ultimateGoalRaw}`,
   });
 
-  // Optional: Called Name calculations (Section 14)
   let calledProfile: CalledNameProfile | undefined;
   if (calledName && (calledName.given || calledName.surname)) {
     const givenClean = cleanAlphaString(calledName.given);
@@ -162,7 +133,6 @@ export function calculatePrimaryProfile(
     }
     const calledVowelsComp = reduceWithTrail(calledVowelsRaw);
 
-    // Section 14.3: Called Name root + Total Birth Date root = Called Name Ultimate Goal
     const calledUGCombinedRaw = combinedComp.root + totalBirthDateComp.root;
     const calledUGComp = reduceWithTrail(calledUGCombinedRaw, {
       rawFormula: `Called Name root (${combinedComp.root}) + Birth Force root (${totalBirthDateComp.root}) = ${calledUGCombinedRaw}`,
@@ -187,26 +157,11 @@ export function calculatePrimaryProfile(
   }
 
   return {
-    firstName: {
-      ...firstNameComp,
-      spelling: firstNameStr,
-    },
-    fullName: {
-      ...fullNameComp,
-      spelling: fullNameStr,
-    },
-    vowels: {
-      ...vowelsComp,
-      vowelSequence: vowelList.join(''),
-    },
-    dayOfBirth: {
-      ...dayComp,
-      calendarDay: dayNum,
-    },
-    totalBirthDate: {
-      ...totalBirthDateComp,
-      rawDigits: dobDigits,
-    },
+    firstName: { ...firstNameComp, spelling: firstNameStr },
+    fullName: { ...fullNameComp, spelling: fullNameStr },
+    vowels: { ...vowelsComp, vowelSequence: vowelList.join('') },
+    dayOfBirth: { ...dayComp, calendarDay: dayNum },
+    totalBirthDate: { ...totalBirthDateComp, rawDigits: dobDigits },
     ultimateGoal: {
       ...ultimateGoalComp,
       fullNameRaw,
