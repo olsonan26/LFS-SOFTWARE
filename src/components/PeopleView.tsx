@@ -25,6 +25,8 @@ import {
   humanize,
   displayDate,
 } from "./WorkspaceUI";
+import { PersonDossier } from "./PersonDossier";
+
 interface Props {
   caseRecord: CaseRecord;
   people: PersonRecord[];
@@ -36,11 +38,13 @@ interface Props {
   onOpenTimeline: () => void;
   onOpenEvidence: () => void;
 }
+
 export function PeopleView(p: Props) {
   const [selected, setSelected] = useState(p.selectedPersonId || "");
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("ALL");
   const [tab, setTab] = useState("profile");
+  const [dossierOpen, setDossierOpen] = useState(false);
   const person = p.people.find((x) => x.personId === selected);
   const fixed = useMemo(
     () =>
@@ -76,6 +80,7 @@ export function PeopleView(p: Props) {
         ["Ultimate goal", "Full name + birth date", fixed.ultimateGoal],
       ] as const)
     : [];
+
   return (
     <div className="page-stack">
       <PageHeading
@@ -214,6 +219,13 @@ export function PeopleView(p: Props) {
                 >
                   <LineChart size={20} />
                   Open chart
+                </button>
+                <button
+                  className="secondary-button"
+                  onClick={() => setDossierOpen(true)}
+                >
+                  <FileText size={20} />
+                  About This Person
                 </button>
               </section>
               <div className="profile-sections">
@@ -443,6 +455,11 @@ export function PeopleView(p: Props) {
               { label: "What happened next?", action: p.onOpenTimeline },
               { label: "What sources support this?", action: p.onOpenEvidence },
             ]}
+          />
+          <PersonDossier
+            person={person}
+            open={dossierOpen}
+            onClose={() => setDossierOpen(false)}
           />
         </>
       )}
