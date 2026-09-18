@@ -1,8 +1,9 @@
 // Ported from olsonan26/Chartcreation-for-students, commit 7d12ffb23397b9f8ab0dbafb7a41072b9f2fc63a.
-// Row order, spacing model and Report calculations retained. Cell annotations are additive.
+// Row order and spacing model retained. Historical overrides let the canonical
+// LFS engine supply BC/AD-aware year/month values without changing the layout.
 import { createContext, useContext, type CSSProperties } from 'react';
 import { yearTrails, monthTrails } from "./compounds";
-import { Report, type MonthsSet } from './numerology';
+import { Report, type MonthsSet, type YearsSet } from './numerology';
 export type CellAnnotation = { title: string; warning: boolean; selected?: boolean };
 export const TimelineAnnotations = createContext<Record<string, CellAnnotation[]>>({});
 const MONTHS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
@@ -54,14 +55,19 @@ export function PrintYearSection({
   start,
   length,
   variant,
+  yearSetOverride,
+  markerAge,
 }: {
   report: Report;
   start: number;
   length: number;
   variant: "focus" | "lifetime";
+  yearSetOverride?: YearsSet;
+  markerAge?: number;
 }) {
-  const set = report.getYearSet(start, length);
-  const markerIndex = report.age - start;
+  const set = yearSetOverride ?? report.getYearSet(start, length);
+  const activeMarkerAge = markerAge ?? report.age;
+  const markerIndex = activeMarkerAge - start;
   const marker = markerIndex >= 0 && markerIndex < length
     ? `${" ".repeat(markerIndex)}*`
     : "";
@@ -89,30 +95,36 @@ export function PrintMonthSection({
   report,
   currentYear,
   focusYear,
+  focusAgeOverride,
+  setsOverride,
+  yearLabelsOverride,
 }: {
   report: Report;
   currentYear: number;
   focusYear: number;
+  focusAgeOverride?: number;
+  setsOverride?: MonthsSet[];
+  yearLabelsOverride?: string[];
 }) {
-  const focusAge = report.age + focusYear - currentYear;
+  const focusAge = focusAgeOverride ?? (report.age + focusYear - currentYear);
   const ages = [focusAge - 1, focusAge, focusAge + 1];
-  const sets = ages.map((age) => age < 0 ? EMPTY_MONTH : report.getMonthSet(age));
+  const sets = setsOverride ?? ages.map((age) => age < 0 ? EMPTY_MONTH : report.getMonthSet(age));
   const join = (select: (set: MonthsSet) => string) => sets.map(select).join("");
   const birthYear = currentYear - report.age;
+  const yearLabels = yearLabelsOverride ?? ages.map(age => String(birthYear + age));
 
   return (
-    <section className="print-month-section" aria-label={`Three year monthly cycles centered on ${focusYear}`}>
-      <div className="print-month-ages">{ages.map(age => <span key={age}>{age < 0 ? "Before birth" : `Age ${age}`}</span>)}</div>
-      <PrintCharacterRow value={join((set) => set.essence)} length={36} tone="red" trails={ages.flatMap(age => Array.from({length:12}, (_, i) => monthTrails(report, age, i+1).ESS))} label="ESS" />
-      <PrintCharacterRow value={join((set) => set.personalMonthEssence)} length={36} tone="blue" trails={ages.flatMap(age => Array.from({length:12}, (_, i) => monthTrails(report, age, i+1).PME))} label="PME" />
-      <PrintCharacterRow value={join((set) => set.combined)} length={36} tone="cyan" trails={ages.flatMap(age => Array.from({length:12}, (_, i) => monthTrails(report, age, i+1).MCOM))} label="MCOM" />
-      <PrintCharacterRow value={join((set) => set.personalMonth)} length={36} tone="blue" trails={ages.flatMap(age => Array.from({length:12}, (_, i) => monthTrails(report, age, i+1).PM))} label="PM" />
+    <section className="print-month-section" aria-label={`Three year monthly cycles centered on ${yearLabels[1] ?? focusYear}`}>
+      <div className="print-month-ages">{ages.map((age, index) => <span key={`${age}-${index}`}>{age < 0 ? "Before birth" : `Age ${age}`}</span>)}</div>
+      <PrintCharacterRow value={join((set) => set.essence)} length={36} tone="red" trails={ages.flatMap(age => Array.from({length:12}, (_, i) => monthTrails(report, Math.max(0, age), i+1).ESS))} label="ESS" />
+      <PrintCharacterRow value={join((set) => set.personalMonthEssence)} length={36} tone="blue" trails={ages.flatMap(age => Array.from({length:12}, (_, i) => monthTrails(report, Math.max(0, age), i+1).PME))} label="PME" />
+      <PrintCharacterRow value={join((set) => set.combined)} length={36} tone="cyan" trails={ages.flatMap(age => Array.from({length:12}, (_, i) => monthTrails(report, Math.max(0, age), i+1).MCOM))} label="MCOM" />
+      <PrintCharacterRow value={join((set) => set.personalMonth)} length={36} tone="blue" trails={ages.flatMap(age => Array.from({length:12}, (_, i) => monthTrails(report, Math.max(0, age), i+1).PM))} label="PM" />
       <PrintCharacterRow value={MONTHS.join("").repeat(3)} length={36} tone="green" label="CM" />
-      <PrintCharacterRow value={join((set) => set.personalYear)} length={36} tone="red" trails={ages.flatMap(age => Array.from({length:12}, (_, i) => monthTrails(report, age, i+1).PY))} label="PY" />
+      <PrintCharacterRow value={join((set) => set.personalYear)} length={36} tone="red" trails={ages.flatMap(age => Array.from({length:12}, (_, i) => monthTrails(report, Math.max(0, age), i+1).PY))} label="PY" />
       <div className="print-month-years">
-        {ages.map((age) => <span key={age}>{birthYear + age}</span>)}
+        {yearLabels.map((label, index) => <span key={`${label}-${index}`}>{label}</span>)}
       </div>
     </section>
   );
 }
-
