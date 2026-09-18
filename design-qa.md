@@ -51,3 +51,12 @@ The default Full chart now includes the source Report's full name, vowel/name-nu
 Print Chart switches Annual/Monthly views to the complete report before opening print. Print CSS removes controls, releases timeline minimum widths, prevents splitting chart panels, and overrides the previous global black/white print rule to preserve source print colors and highlights. A temporary browser harness applied the compiled print rules for visual inspection; verified zero minimum width on Extended Cycles, no horizontal page overflow, correct print RGB values and retained pink pattern backgrounds. Actual printer pagination was not tested. The temporary harness is removed.
 
 TypeScript and production build pass; existing source calculation fixtures pass. Daily and Compare behavior remains unchanged.
+
+
+## Unified chart sheet — September 18, 2026
+- Matched source report placement: name/PMEI left, birthday center, P/C right, seasons across, then annual, monthly and extended cycles on one continuous paper sheet.
+- Added ages above monthly year blocks, inline year/age sliders, fit-sheet and enlarged reading views.
+- Preserved vendor calculation file, displayed values, source colors and forensic pattern annotations. Hover titles now explain source reduction trails independently of forensic compounds.
+- Browser checked complete sheet fits in one viewport after selecting Fit complete sheet, year slider updates 2024 to 2025 and ages 42/43/44, and compound titles appear in rendered cells.
+- Print stylesheet harness: 200 × 277 mm sheet, body height 1047 CSS px, no panel overflow, all four report sections present. A4 portrait with 5 mm margins. Native printer pagination was not exercised.
+- TypeScript, production build and four source/compound tests passed; reduction trails checked against displayed digits across three names, seven ages, and all months. Daily and Compare rendering untouched.

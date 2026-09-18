@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { PersonRecord } from '../types';
 import { Report, normalizeName } from '../vendor/student-charts/numerology';
@@ -28,8 +28,19 @@ export function StudentTimeline({ person, mode, year, month, onYearChange, onMon
   const currentYear = new Date().getFullYear();
   const report = useMemo(() => new Report(normalizeName(person.verifiedBirthName).toUpperCase(), `${String(birthDay).padStart(2, '0')}/${String(birthMonth).padStart(2, '0')}/${birthYear}`, currentYear), [person.verifiedBirthName, person.dob, currentYear]);
   const start = Math.max(0, focusAge - 14);
-  const extendedStart = Math.floor(focusAge / 80) * 80;
+  const extendedStart = Math.max(0, focusAge - 40);
   const maxYear = Math.min(9998, Math.max(birthYear + 119, focusYear + 20));
+  const [fitSheet, setFitSheet] = useState(true);
+  const [sheetScale, setSheetScale] = useState(1);
+  const sheetViewport = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const viewport = sheetViewport.current;
+    if (!viewport || mode !== 'FULL') return;
+    const resize = () => setSheetScale(Math.min(1, viewport.clientWidth / 794, Math.max(260, window.innerHeight - 180) / 1048));
+    const observer = new ResizeObserver(resize);
+    observer.observe(viewport); window.addEventListener('resize', resize); resize();
+    return () => { observer.disconnect(); window.removeEventListener('resize', resize); };
+  }, [mode]);
   const [showPatterns, setShowPatterns] = useState(true);
   const [showDiagonals, setShowDiagonals] = useState(true);
   const [showIntensifiers, setShowIntensifiers] = useState(true);
@@ -62,8 +73,7 @@ export function StudentTimeline({ person, mode, year, month, onYearChange, onMon
     ? [['ESS',selectedAnnual?.ess],['COM',selectedAnnual?.com],['PY',selectedAnnual?.py],['CY',selectedAnnual?.cy], ...(showDiagonals ? [['Birthday lapse',selectedAnnual?.birthdayLapse.combinedCompound] as [string,CompoundValue | undefined]] : [])]
     : [['ESS',selectedMonthly?.ess],['PME',selectedMonthly?.pme],['MCOM',selectedMonthly?.mcom],['PM',selectedMonthly?.pm],['PY',selectedMonthly?.py], ...(showDiagonals ? [['End crossover',selectedMonthly?.crossover?.combinedCompound] as [string,CompoundValue | undefined]] : [])];
 
-  return <section className="student-timeline" aria-label={`${mode === 'FULL' ? 'Full chart report' : mode === 'ANNUAL' ? 'Annual student timeline' : 'Monthly student timeline'}`}>
-    {mode === 'FULL' && <ReportIdentity report={report}/> }
+  return <section className={`student-timeline ${mode === 'FULL' ? 'complete-chart' : ''}`} aria-label={`${mode === 'FULL' ? 'Full chart report' : mode === 'ANNUAL' ? 'Annual student timeline' : 'Monthly student timeline'}`}>
     <div className="timeline-navigation">
       <div><h2>{mode === 'FULL' ? 'Chart time controls' : mode === 'ANNUAL' ? 'Annual timeline' : 'Monthly timeline'}</h2><p>{person.displayName} · {dateLabel(focusYear,mode === 'MONTHLY' ? month : undefined)} · Age {focusAge}</p></div>
       <label className="timeline-year-input">Go to year<input aria-label="Go to timeline year" type="number" min={birthYear} max={9998} key={focusYear} defaultValue={focusYear} onBlur={e => {if(e.target.value) changeYear(Number(e.target.value)); else e.target.value = String(focusYear);}} onKeyDown={e => {if(e.key === "Enter") e.currentTarget.blur();}} /></label>
@@ -74,6 +84,10 @@ export function StudentTimeline({ person, mode, year, month, onYearChange, onMon
         <button className="secondary-button" aria-label="Next timeline month" disabled={focusYear === 9998 && month === 12} onClick={() => changeMonth(1)}><ChevronRight size={20}/></button>
       </div>}
     </div>
+    {mode === 'FULL' && <div className="sheet-view-controls"><button className="secondary-button" aria-pressed={fitSheet} onClick={() => {setFitSheet(!fitSheet); sheetViewport.current?.scrollIntoView({block:'start'});}}>{fitSheet ? 'Enlarge for reading' : 'Fit complete sheet'}</button><span>Full chart · One-page print layout</span></div>}
+    <div ref={sheetViewport} className="timeline-sheet-viewport">
+    <div className="timeline-report-sheet" style={mode === 'FULL' ? {zoom: fitSheet ? sheetScale : 1} : undefined}>
+    {mode === 'FULL' && <ReportIdentity report={report}/>}
     <div className="timeline-chart-card">
       <h3>{mode !== 'MONTHLY' ? 'Yearly Timeline — Personal Cycles' : 'Yearly / Monthly Timeline Summary'}</h3>
       <div className="student-chart-paper">
@@ -87,6 +101,7 @@ export function StudentTimeline({ person, mode, year, month, onYearChange, onMon
     </div>
     {mode === 'FULL' && <div className="timeline-chart-card">
       <h3>Yearly / Monthly Timeline Summary</h3>
+      <label className="sheet-time-slider">Center year: {focusYear} · Age {focusAge}<input aria-label="Monthly chart year slider" type="range" min={birthYear} max={maxYear} value={focusYear} onChange={e => changeYear(Number(e.target.value))}/></label>
       <div className="student-chart-paper"><div className="print-panel-scroll" tabIndex={0} role="region" aria-label="Three year monthly timeline; scroll horizontally to explore">
         <TimelineAnnotations.Provider value={showPatterns ? monthAnnotations : {CM:monthAnnotations.CM}}><PrintMonthSection report={report} currentYear={currentYear} focusYear={focusYear}/></TimelineAnnotations.Provider>
       </div></div>
@@ -96,9 +111,11 @@ export function StudentTimeline({ person, mode, year, month, onYearChange, onMon
       <div className="student-chart-paper"><div className="print-panel-scroll" tabIndex={0} role="region" aria-label="Extended sequence timeline; scroll horizontally to explore">
         <TimelineAnnotations.Provider value={showPatterns ? annualAnnotations(extendedStart,80) : {}}><PrintYearSection report={report} start={extendedStart} length={80} variant="lifetime"/></TimelineAnnotations.Provider>
       </div></div>
+      <label className="sheet-time-slider extended-time-slider">Explore ages · {focusAge}<input aria-label="Extended chart age slider" type="range" min={0} max={maxYear-birthYear} value={focusAge} onChange={e => changeYear(birthYear+Number(e.target.value))}/></label>
     </section>}
-    <section className="timeline-warning-panel" aria-label="Forensic pattern warnings">
-      <h3>Pattern warnings · {dateLabel(focusYear,mode === 'MONTHLY' ? month : undefined)}</h3>
+    </div></div>
+    <details className="timeline-warning-panel" aria-label="Forensic pattern warnings">
+      <summary>Pattern warnings · {dateLabel(focusYear,mode === 'MONTHLY' ? month : undefined)}</summary>
       <p>The timeline keeps the student chart’s values. Outlined cells flag existing forensic compound patterns for that date; the compound values are shown below.</p>
       <div className="timeline-pattern-options">
         <label><input type="checkbox" checked={showPatterns} onChange={e=>setShowPatterns(e.target.checked)}/>Highlight patterns</label>
@@ -115,6 +132,6 @@ export function StudentTimeline({ person, mode, year, month, onYearChange, onMon
       <details className="timeline-warning-list"><summary>All warnings in this timeline</summary>
         <div>{(mode !== 'MONTHLY' ? annual.filter(s => s.calendarYear >= birthYear + start && s.calendarYear < birthYear + start + 30).map(s => ({year:s.calendarYear, month:undefined as number | undefined, labels:[...s.powerNumbers.map(n=>`PN ${n}`), ...(showIntensifiers && s.isIntensified ? ['INTENS'] : []), ...(s.isCycleReset ? ['9→1 RESET'] : []), ...(showDiagonals && s.birthdayLapse.isPowerNumber ? [`Birthday lapse ${formatCompound(s.birthdayLapse.combinedCompound)}`] : [])]})) : monthly.map(s => ({year:s.year,month:s.monthIndex,labels:[...s.powerNumbers.map(n=>`PN ${n}`),...(showDiagonals && s.crossover?.isPowerNumber ? [`End crossover ${formatCompound(s.crossover.combinedCompound)}`] : [])]}))).filter(s=>s.labels.length).map(s=><button className="secondary-button" key={`${s.year}-${s.month ?? 0}`} onClick={()=>{changeYear(s.year);if(s.month) onMonthChange(s.month);}}><strong>{dateLabel(s.year,s.month)}</strong><span>{s.labels.join(' · ')}</span></button>)}</div>
       </details>
-    </section>
+    </details>
   </section>;
 }
