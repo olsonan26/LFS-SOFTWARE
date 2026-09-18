@@ -1058,14 +1058,14 @@
     margin: 0;
   }
 
-  html,
-  body {
+  html:has(.person-dossier-overlay),
+  body:has(.person-dossier-overlay) {
     width: 8.5in;
     min-height: 11in;
     background: white !important;
   }
 
-  body * {
+  body:has(.person-dossier-overlay) * {
     visibility: hidden !important;
   }
 

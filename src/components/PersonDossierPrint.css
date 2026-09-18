@@ -17,9 +17,9 @@
     margin: 0;
   }
 
-  html,
-  body,
-  #root {
+  html:has(.person-dossier-overlay),
+  body:has(.person-dossier-overlay),
+  #root:has(.person-dossier-overlay) {
     width: 8.5in !important;
     height: 11in !important;
     min-height: 11in !important;

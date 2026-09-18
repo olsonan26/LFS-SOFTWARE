@@ -147,7 +147,7 @@
 .complete-chart .timeline-month-controls { flex:1 1 260px; }
 .complete-chart .timeline-navigation { gap:.5rem 1rem; }
 .complete-chart .timeline-navigation h2 { font-size:.9rem; }
-@page lettrology-chart { size:A4 portrait; margin:5mm; }
+@page lettrology-chart { size:Letter portrait; margin:0.25in; }
 @media print {
  body:has(.complete-chart) { margin:0 !important; }
  .legacy-view:has(.complete-chart) { margin:0 !important; padding:0 !important; }
@@ -156,7 +156,7 @@
  .legacy-view .complete-chart { display:block; margin:0 !important; padding:0 !important; }
  .legacy-view .complete-chart .timeline-navigation, .legacy-view .sheet-view-controls, .legacy-view .timeline-warning-panel { display:none !important; }
  .legacy-view .complete-chart .timeline-sheet-viewport { overflow:visible; margin:0; }
- .legacy-view .complete-chart .timeline-report-sheet { page:lettrology-chart; zoom:1 !important; width:200mm; height:277mm; padding:3mm; margin:0; grid-template-rows:60mm 66mm 60mm minmax(0,1fr); gap:2mm; break-inside:avoid; page-break-inside:avoid; }
+ .legacy-view .complete-chart .timeline-report-sheet { page:lettrology-chart; zoom:1 !important; width:8in; height:10.45in; padding:3mm; margin:0; grid-template-rows:2.3in 2.5in 2.25in minmax(0,1fr); gap:2mm; break-inside:avoid; page-break-inside:avoid; }
  .legacy-view .complete-chart .student-report-identity { margin:0; grid-template-rows:14mm minmax(0,1fr); }
  .legacy-view .complete-chart .print-year-section, .legacy-view .complete-chart .print-month-section { min-height:0; min-width:0; }
  .legacy-view .complete-chart .print-data-row { min-height:0; }
@@ -172,3 +172,17 @@
 .student-timeline .sheet-time-slider input[type=range] { min-height:22px; height:22px; margin:0; }
 .extended-time-slider { padding-bottom:4px; }
 @media print { .legacy-view .student-timeline .sheet-time-slider { display:none !important; } }
+
+@media print {
+ html:has(.complete-chart), body:has(.complete-chart), #root:has(.complete-chart) { width:auto !important; height:auto !important; min-height:0 !important; overflow:visible !important; }
+ .legacy-view .complete-chart .student-report-masthead { background:#101e27 !important; }
+ .legacy-view .complete-chart .student-report-masthead * { background:transparent !important; color:#edc77f !important; }
+ .legacy-view .complete-chart .student-report-masthead h2 { color:#edc77f !important; }
+}
+
+@media print {
+ .legacy-view .complete-chart .print-tone-red, .legacy-view .complete-chart .print-tone-red span { color:#d60000 !important; }
+ .legacy-view .complete-chart .print-tone-cyan, .legacy-view .complete-chart .print-tone-cyan span { color:#008ea1 !important; }
+ .legacy-view .complete-chart .print-tone-green, .legacy-view .complete-chart .print-tone-green span { color:#078a24 !important; }
+ .legacy-view .complete-chart .timeline-chart-card h3, .legacy-view .complete-chart .timeline-extended h3 { color:#97601b !important; }
+}
