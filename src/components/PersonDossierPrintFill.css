@@ -1,0 +1,292 @@
+/*
+ * Final print-fill pass for the 8.5 x 11 Person Dossier.
+ * Loaded AFTER PersonDossierPrint.css.
+ *
+ * Goal: keep the dossier on one Letter page while using the full printable
+ * height instead of leaving a large blank lower half. The core perspective
+ * section flexes to occupy remaining space, preserving the canonical 3 x 2
+ * composition and keeping Elevated / Shadow side-by-side.
+ */
+
+@media print {
+  .person-dossier-paper {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 8.5in !important;
+    height: 11in !important;
+    min-height: 11in !important;
+    max-height: 11in !important;
+    padding: 0.20in 0.22in 0.16in !important;
+    overflow: hidden !important;
+  }
+
+  .dossier-brand-header,
+  .dossier-identity,
+  .dossier-glance,
+  .dossier-footer {
+    flex: 0 0 auto !important;
+  }
+
+  /* Slightly enlarge the top area so it reads like the reference artwork. */
+  .dossier-brand-header {
+    min-height: 0.62in !important;
+    padding-bottom: 0.11in !important;
+  }
+
+  .dossier-brand-mark {
+    width: 0.48in !important;
+    height: 0.48in !important;
+  }
+
+  .dossier-brand strong {
+    font-size: 17pt !important;
+  }
+
+  .dossier-brand small {
+    font-size: 5.8pt !important;
+  }
+
+  .dossier-brand-header > p {
+    font-size: 8.2pt !important;
+    line-height: 1.22 !important;
+  }
+
+  .dossier-identity {
+    grid-template-columns: 1.46in minmax(0, 1fr) !important;
+    gap: 0.17in !important;
+    padding: 0.14in 0 0.14in !important;
+  }
+
+  .dossier-photo-card {
+    padding: 0.08in !important;
+  }
+
+  .dossier-photo {
+    height: 1.58in !important;
+  }
+
+  .dossier-photo-card p {
+    margin-top: 0.07in !important;
+    font-size: 7.4pt !important;
+    line-height: 1.18 !important;
+  }
+
+  .dossier-title-row {
+    grid-template-columns: minmax(0, 1fr) 2.10in !important;
+    gap: 0.13in !important;
+  }
+
+  .dossier-title-row h1 {
+    font-size: 25.5pt !important;
+    line-height: 1 !important;
+  }
+
+  .dossier-kicker {
+    margin-top: 0.035in !important;
+    font-size: 6pt !important;
+  }
+
+  .dossier-metadata {
+    padding: 0.065in 0.075in !important;
+  }
+
+  .dossier-metadata dt {
+    font-size: 5.7pt !important;
+  }
+
+  .dossier-metadata dd {
+    font-size: 6.8pt !important;
+  }
+
+  .dossier-name-row {
+    grid-template-columns: minmax(0, 1fr) 1.52in !important;
+    margin-top: 0.10in !important;
+  }
+
+  .dossier-name-row h2 {
+    font-size: 18.5pt !important;
+  }
+
+  .dossier-person-facts {
+    margin-top: 0.055in !important;
+    font-size: 7.6pt !important;
+  }
+
+  .dossier-confidential {
+    width: 1.42in !important;
+    padding: 0.05in 0.055in !important;
+    font-size: 6.8pt !important;
+  }
+
+  .dossier-confidential strong {
+    font-size: 9pt !important;
+  }
+
+  .dossier-summary-row {
+    grid-template-columns: minmax(0, 1fr) 1.52in !important;
+    gap: 0.12in !important;
+    margin-top: 0.09in !important;
+  }
+
+  .dossier-summary-row > p {
+    font-size: 8pt !important;
+    line-height: 1.28 !important;
+  }
+
+  .dossier-summary-row blockquote {
+    font-size: 8.6pt !important;
+    line-height: 1.28 !important;
+  }
+
+  /*
+   * The key fix: this section owns all remaining vertical space.
+   * This prevents the report from bunching at the top while still guaranteeing
+   * a single printed sheet.
+   */
+  .dossier-core-section {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    flex-direction: column !important;
+    padding-top: 0.12in !important;
+  }
+
+  .dossier-section-heading {
+    flex: 0 0 auto !important;
+    margin-bottom: 0.075in !important;
+  }
+
+  .dossier-section-heading h2 {
+    font-size: 15.5pt !important;
+  }
+
+  .dossier-section-heading p {
+    font-size: 5.1pt !important;
+  }
+
+  .dossier-core-grid {
+    display: grid !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.075in !important;
+  }
+
+  .dossier-core-card {
+    display: grid !important;
+    min-height: 0 !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
+  }
+
+  .dossier-core-card > header {
+    grid-template-columns: 0.36in minmax(0, 1fr) auto !important;
+    min-height: 0.44in !important;
+    gap: 0.05in !important;
+    padding: 0.045in 0.05in !important;
+  }
+
+  .dossier-number {
+    width: 0.34in !important;
+    height: 0.34in !important;
+    font-size: 12.5pt !important;
+  }
+
+  .dossier-core-title strong {
+    font-size: 7.4pt !important;
+    line-height: 1.08 !important;
+  }
+
+  .dossier-core-title small {
+    font-size: 4.7pt !important;
+    line-height: 1.1 !important;
+  }
+
+  .dossier-calculation {
+    font-size: 5.8pt !important;
+  }
+
+  .dossier-expression-grid {
+    height: 100% !important;
+    min-height: 0 !important;
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .dossier-expression {
+    min-height: 0 !important;
+    padding: 0 0.065in 0.065in !important;
+  }
+
+  .dossier-expression h3 {
+    margin: 0 -0.065in 0.045in !important;
+    padding: 0.045in 0.05in !important;
+    font-size: 6.15pt !important;
+  }
+
+  .dossier-expression h3 svg {
+    width: 10px !important;
+    height: 10px !important;
+  }
+
+  .dossier-expression > p {
+    margin-bottom: 0.04in !important;
+    font-size: 6.15pt !important;
+    line-height: 1.20 !important;
+  }
+
+  .dossier-expression ul {
+    padding-left: 0.115in !important;
+  }
+
+  .dossier-expression li {
+    margin-bottom: 0.022in !important;
+    font-size: 6.25pt !important;
+    line-height: 1.16 !important;
+  }
+
+  .dossier-glance {
+    min-height: 0.66in !important;
+    margin-top: 0.075in !important;
+  }
+
+  .dossier-glance-intro,
+  .dossier-glance-column {
+    padding: 0.07in 0.07in !important;
+  }
+
+  .dossier-compass {
+    font-size: 23pt !important;
+  }
+
+  .dossier-glance-intro strong {
+    font-size: 7pt !important;
+  }
+
+  .dossier-glance-intro small {
+    font-size: 4.2pt !important;
+  }
+
+  .dossier-glance-column h3 {
+    font-size: 5.45pt !important;
+  }
+
+  .dossier-glance-column li {
+    margin-bottom: 0.016in !important;
+    font-size: 5.7pt !important;
+    line-height: 1.12 !important;
+  }
+
+  .dossier-footer {
+    min-height: 0.34in !important;
+    margin-top: 0.065in !important;
+    padding-top: 0.065in !important;
+  }
+
+  .dossier-footer-brand strong {
+    font-size: 8.8pt !important;
+  }
+
+  .dossier-footer > p {
+    font-size: 7pt !important;
+  }
+}
