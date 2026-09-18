@@ -1,0 +1,429 @@
+/*
+ * Print-only overrides for the canonical 8.5 x 11 Person Dossier.
+ *
+ * Why this exists:
+ * Browser print layout is ~816 CSS px wide at 96dpi, which also triggers the
+ * tablet breakpoint in PersonDossier.css. That breakpoint changes the dossier
+ * from the canonical 3 x 2 grid to two columns and stacks header sections,
+ * forcing the report onto a second printed page.
+ *
+ * These rules intentionally restore the desktop/canonical composition for
+ * print and compact vertical rhythm so the complete dossier fits on one sheet.
+ */
+
+@media print {
+  @page {
+    size: Letter portrait;
+    margin: 0;
+  }
+
+  html,
+  body,
+  #root {
+    width: 8.5in !important;
+    height: 11in !important;
+    min-height: 11in !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: #fff !important;
+  }
+
+  .person-dossier-overlay {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 8.5in !important;
+    height: 11in !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: #fff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .person-dossier-dialog {
+    width: 8.5in !important;
+    min-width: 8.5in !important;
+    max-width: 8.5in !important;
+    height: 11in !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    animation: none !important;
+  }
+
+  .person-dossier-paper {
+    box-sizing: border-box !important;
+    width: 8.5in !important;
+    height: 11in !important;
+    min-height: 11in !important;
+    max-height: 11in !important;
+    margin: 0 !important;
+    padding: 0.18in 0.22in 0.14in !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  /* Never print interactive / protruding UI. */
+  .dossier-folder,
+  .dossier-tabs,
+  .dossier-close,
+  .dossier-footer-actions {
+    display: none !important;
+  }
+
+  /* Restore canonical desktop header after the <=900px breakpoint fires. */
+  .dossier-brand-header {
+    min-height: 0.54in !important;
+    padding: 0 0.34in 0.09in 0.02in !important;
+  }
+
+  .dossier-brand-mark {
+    width: 0.42in !important;
+    height: 0.42in !important;
+  }
+
+  .dossier-brand strong {
+    font-size: 15pt !important;
+  }
+
+  .dossier-brand small {
+    font-size: 5.2pt !important;
+  }
+
+  .dossier-brand-header > p {
+    display: block !important;
+    margin: 0.05in 0.03in 0 0 !important;
+    font-size: 7.5pt !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Keep photo + person details side-by-side. */
+  .dossier-identity {
+    grid-template-columns: 1.28in minmax(0, 1fr) !important;
+    gap: 0.14in !important;
+    padding: 0.11in 0 0.10in !important;
+  }
+
+  .dossier-photo-card {
+    width: auto !important;
+    padding: 0.07in !important;
+  }
+
+  .dossier-photo {
+    height: 1.34in !important;
+  }
+
+  .dossier-photo-card p {
+    margin: 0.06in 0.03in 0 !important;
+    font-size: 6.7pt !important;
+    line-height: 1.15 !important;
+  }
+
+  .dossier-paperclip {
+    top: -0.08in !important;
+    width: 0.16in !important;
+    height: 0.48in !important;
+    border-width: 2px !important;
+  }
+
+  /* Tablet CSS stacks these; print must restore the reference layout. */
+  .dossier-title-row {
+    grid-template-columns: minmax(0, 1fr) 2.02in !important;
+    gap: 0.12in !important;
+  }
+
+  .dossier-title-row h1 {
+    font-size: 22pt !important;
+    line-height: 1 !important;
+    letter-spacing: 0.045em !important;
+  }
+
+  .dossier-kicker {
+    margin-top: 0.03in !important;
+    font-size: 5.5pt !important;
+    letter-spacing: 0.12em !important;
+  }
+
+  .dossier-metadata {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.02in !important;
+    margin: 0 !important;
+    padding: 0.055in 0.07in !important;
+  }
+
+  .dossier-metadata div {
+    grid-template-columns: 0.66in 1fr !important;
+    gap: 0.04in !important;
+  }
+
+  .dossier-metadata dt {
+    font-size: 5.2pt !important;
+  }
+
+  .dossier-metadata dd {
+    font-size: 6.2pt !important;
+    line-height: 1.12 !important;
+  }
+
+  .dossier-name-row {
+    grid-template-columns: minmax(0, 1fr) 1.45in !important;
+    gap: 0.10in !important;
+    margin-top: 0.08in !important;
+  }
+
+  .dossier-name-row h2 {
+    font-size: 16.5pt !important;
+    line-height: 1 !important;
+  }
+
+  .dossier-person-facts {
+    display: flex !important;
+    gap: 0.04in 0.09in !important;
+    margin-top: 0.05in !important;
+    font-size: 6.8pt !important;
+  }
+
+  .dossier-person-facts span {
+    padding-right: 0.08in !important;
+    border-right: 1px solid rgba(39, 67, 103, 0.32) !important;
+  }
+
+  .dossier-person-facts span:last-child {
+    padding-right: 0 !important;
+    border-right: 0 !important;
+  }
+
+  .dossier-confidential {
+    justify-self: end !important;
+    width: 1.34in !important;
+    padding: 0.04in 0.05in !important;
+    font-size: 6.2pt !important;
+    border-width: 1.5px !important;
+  }
+
+  .dossier-confidential strong {
+    font-size: 8.3pt !important;
+  }
+
+  .dossier-summary-row {
+    grid-template-columns: minmax(0, 1fr) 1.42in !important;
+    gap: 0.11in !important;
+    margin-top: 0.08in !important;
+  }
+
+  .dossier-summary-row > p {
+    font-size: 7.2pt !important;
+    line-height: 1.24 !important;
+  }
+
+  .dossier-summary-row blockquote {
+    margin: 0 !important;
+    padding: 0.025in 0 0.025in 0.08in !important;
+    font-size: 7.7pt !important;
+    line-height: 1.23 !important;
+  }
+
+  /* Six core perspectives MUST remain 3 columns x 2 rows on paper. */
+  .dossier-core-section {
+    padding-top: 0.09in !important;
+  }
+
+  .dossier-section-heading {
+    display: flex !important;
+    align-items: end !important;
+    justify-content: space-between !important;
+    gap: 0.10in !important;
+    margin-bottom: 0.055in !important;
+    padding: 0 0.02in !important;
+  }
+
+  .dossier-section-heading h2 {
+    font-size: 13.5pt !important;
+    line-height: 1 !important;
+  }
+
+  .dossier-section-heading p {
+    margin: 0 !important;
+    font-size: 4.8pt !important;
+    text-align: right !important;
+  }
+
+  .dossier-core-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    gap: 0.055in !important;
+  }
+
+  .dossier-core-card {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    border-radius: 3px !important;
+  }
+
+  .dossier-core-card > header {
+    grid-template-columns: 0.31in minmax(0, 1fr) auto !important;
+    gap: 0.045in !important;
+    min-height: 0.36in !important;
+    padding: 0.035in 0.045in !important;
+  }
+
+  .dossier-number {
+    width: 0.29in !important;
+    height: 0.29in !important;
+    font-size: 11pt !important;
+  }
+
+  .dossier-core-title strong {
+    font-size: 6.6pt !important;
+    line-height: 1.05 !important;
+  }
+
+  .dossier-core-title small {
+    margin-top: 0.015in !important;
+    font-size: 4.3pt !important;
+    letter-spacing: 0.07em !important;
+  }
+
+  .dossier-calculation {
+    margin-top: 0.01in !important;
+    font-size: 5.2pt !important;
+  }
+
+  /* Prevent mobile/tablet from stacking Elevated and Shadow on paper. */
+  .dossier-expression-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .dossier-expression {
+    padding: 0 0.055in 0.055in !important;
+  }
+
+  .dossier-expression + .dossier-expression {
+    border-top: 0 !important;
+    border-left: 1px solid rgba(101, 77, 39, 0.18) !important;
+  }
+
+  .dossier-expression h3 {
+    gap: 0.025in !important;
+    margin: 0 -0.055in 0.035in !important;
+    padding: 0.035in 0.04in !important;
+    font-size: 5.35pt !important;
+  }
+
+  .dossier-expression h3 svg {
+    width: 9px !important;
+    height: 9px !important;
+  }
+
+  .dossier-expression > p {
+    margin: 0 0 0.03in !important;
+    font-size: 5.35pt !important;
+    line-height: 1.16 !important;
+  }
+
+  .dossier-expression ul {
+    padding-left: 0.10in !important;
+  }
+
+  .dossier-expression li {
+    margin: 0 0 0.015in !important;
+    font-size: 5.55pt !important;
+    line-height: 1.13 !important;
+  }
+
+  /* Restore the one-line 5-column At A Glance strip. */
+  .dossier-glance {
+    grid-template-columns: 1.08fr repeat(4, 1fr) !important;
+    margin-top: 0.06in !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .dossier-glance-intro {
+    grid-column: auto !important;
+  }
+
+  .dossier-glance-intro,
+  .dossier-glance-column {
+    padding: 0.055in 0.06in !important;
+    border-top: 0 !important;
+  }
+
+  .dossier-glance-column,
+  .dossier-glance-column:nth-child(even) {
+    border-left: 1px solid rgba(101, 77, 39, 0.18) !important;
+  }
+
+  .dossier-compass {
+    font-size: 20pt !important;
+  }
+
+  .dossier-glance-intro strong {
+    font-size: 6.2pt !important;
+  }
+
+  .dossier-glance-intro small {
+    margin-top: 0.015in !important;
+    font-size: 3.9pt !important;
+  }
+
+  .dossier-glance-column h3 {
+    margin-bottom: 0.025in !important;
+    font-size: 4.9pt !important;
+  }
+
+  .dossier-glance-column h3 svg {
+    width: 10px !important;
+    height: 10px !important;
+  }
+
+  .dossier-glance-column ul {
+    padding-left: 0.10in !important;
+  }
+
+  .dossier-glance-column li {
+    margin-bottom: 0.012in !important;
+    font-size: 5.15pt !important;
+    line-height: 1.10 !important;
+  }
+
+  /* Footer remains visible, actions do not. */
+  .dossier-footer {
+    grid-template-columns: auto 1fr !important;
+    gap: 0.10in !important;
+    margin-top: 0.05in !important;
+    padding-top: 0.055in !important;
+  }
+
+  .dossier-footer-brand strong {
+    font-size: 8pt !important;
+  }
+
+  .dossier-footer-brand small {
+    font-size: 3.5pt !important;
+  }
+
+  .dossier-footer-brand .dossier-brand-mark {
+    width: 0.27in !important;
+    height: 0.27in !important;
+  }
+
+  .dossier-footer > p {
+    font-size: 6.4pt !important;
+    text-align: center !important;
+  }
+
+  /* Absolute guarantee: the dossier is one physical printed sheet. */
+  .person-dossier-paper,
+  .person-dossier-paper * {
+    orphans: 1 !important;
+    widows: 1 !important;
+  }
+}
