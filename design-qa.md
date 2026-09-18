@@ -60,3 +60,10 @@ TypeScript and production build pass; existing source calculation fixtures pass.
 - Browser checked complete sheet fits in one viewport after selecting Fit complete sheet, year slider updates 2024 to 2025 and ages 42/43/44, and compound titles appear in rendered cells.
 - Print stylesheet harness: 200 × 277 mm sheet, body height 1047 CSS px, no panel overflow, all four report sections present. A4 portrait with 5 mm margins. Native printer pagination was not exercised.
 - TypeScript, production build and four source/compound tests passed; reduction trails checked against displayed digits across three names, seven ages, and all months. Daily and Compare rendering untouched.
+
+
+## Letter chart print repair
+- Root cause: dossier stylesheet globally hid every body descendant during print. Scoped dossier visibility and fixed-page root rules to an open dossier only.
+- Full chart prints the existing selected-year/month DOM, without regenerating or resetting the timeline; sliders hidden. Letter portrait, quarter-inch margins, 8 × 10.45-inch report.
+- Browser print-style harness confirmed visible report, selected 1997 and ages 14/15/16 preserved, 58 highlighted cells, both inline sliders hidden, total document height 1003px within Letter printable height 1008px. Native print-dialog PDF export not available in this browser verification.
+- TypeScript and production build passed.
