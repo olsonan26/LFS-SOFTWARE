@@ -63,3 +63,45 @@
 .timeline-warning-list button span { font-size:.7rem; color:var(--muted); }
 
 .student-timeline .timeline-selected-month { outline:2px solid #b7791f; outline-offset:-2px; background:#fff1cb; }
+
+.student-report-identity { border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.student-report-masthead { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:1rem; padding:1rem; background:var(--surface); }
+.student-report-masthead h2 { margin:0; color:var(--gold); }
+.student-report-masthead p { margin:0; font-size:.8rem; color:var(--muted); }
+.student-report-masthead>div:last-child { display:grid; }
+.student-report-masthead span { font-size:.75rem; color:var(--muted); }
+.student-report-masthead strong { font-size:1.2rem; }
+.student-timeline .print-report-summary { display:grid; grid-template-areas:'identity identity birth' 'pmei pincha birth' 'seasons seasons seasons'; grid-template-columns:1fr 1fr 1fr; gap:1.5rem; padding:1.25rem; background:#fffefa; color:#07111c; overflow-x:auto; }
+.student-timeline .print-report-summary code { display:block; white-space:pre; font:700 .85rem/1.65 'Courier New',Courier,monospace; }
+.student-timeline .print-summary-identity { grid-area:identity; overflow-x:auto; }
+.student-timeline .print-summary-identity>code:nth-child(2) { margin:.5rem 0; font-size:1rem; }
+.student-timeline .print-summary-pmei { grid-area:pmei; }
+.student-timeline .print-summary-birth { grid-area:birth; align-self:center; }
+.student-timeline .print-summary-pincha { grid-area:pincha; align-self:center; }
+.student-timeline .print-summary-seasons { grid-area:seasons; display:flex; flex-wrap:wrap; gap:1.5rem; border-top:1px solid #ddd4c5; padding-top:.7rem; }
+.student-timeline .name-number-stack { display:grid; column-gap:2ch; width:max-content; }
+.student-timeline .name-number-stack code { text-align:center; }
+@media(max-width:700px) { .student-timeline .print-report-summary { grid-template-areas:'identity identity' 'pmei birth' 'pincha pincha' 'seasons seasons'; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1rem; } .student-timeline .print-report-summary code { font-size:.7rem; } }
+@media print { .student-report-masthead { color:#07111c; background:white; } .student-timeline .print-report-summary { break-inside:avoid; } .student-timeline .timeline-chart-card { break-inside:avoid; } }
+.report-field-label { display:block; font-size:.7rem; margin-bottom:.25rem; color:#475569; }
+.timeline-extended>h3 { padding:.9rem 1rem; margin:0; font-size:.95rem; color:var(--gold); }
+@media print {
+ .legacy-view .student-timeline { display:block; }
+ .legacy-view .student-timeline>section, .legacy-view .student-timeline>.timeline-chart-card, .legacy-view .student-report-identity { margin-bottom:5mm; }
+ .legacy-view .student-timeline .print-panel-scroll, .legacy-view .student-timeline .print-summary-identity { overflow:visible; }
+ .legacy-view .student-timeline .print-year-focus { min-height:60mm; }
+ .legacy-view .student-timeline .print-month-section { min-height:45mm; }
+ .legacy-view .student-timeline .print-year-lifetime { min-height:60mm; }
+ .legacy-view .student-timeline .print-data-row { min-height:4mm; }
+ .legacy-view .student-timeline .print-character-row span { padding:1px 0; }
+ .legacy-view .student-timeline .timeline-extended { break-inside:avoid; }
+ .legacy-view .student-timeline .print-tone-black, .legacy-view .student-timeline .print-tone-black span { color:#07111c !important; }
+ .legacy-view .student-timeline .print-tone-red, .legacy-view .student-timeline .print-tone-red span { color:#e00000 !important; }
+ .legacy-view .student-timeline .print-tone-blue, .legacy-view .student-timeline .print-tone-blue span { color:#153dd1 !important; }
+ .legacy-view .student-timeline .print-tone-cyan, .legacy-view .student-timeline .print-tone-cyan span { color:#16a7b8 !important; }
+ .legacy-view .student-timeline .print-tone-green, .legacy-view .student-timeline .print-tone-green span { color:#16a02e !important; }
+ .legacy-view .student-timeline .timeline-pattern-cell, .legacy-view .student-timeline .forensic-power { background:#fee2e2 !important; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+ .legacy-view .student-timeline .timeline-selected-month { background:#fff1cb !important; }
+ .legacy-view .student-timeline .timeline-warning-list { display:none; }
+ .legacy-view .student-timeline .student-report-masthead h2 { color:#07111c !important; }
+}

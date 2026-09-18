@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import { flushSync } from 'react-dom';
 import { StudentTimeline } from './StudentTimeline';
 import {
   Calendar,
@@ -53,7 +54,7 @@ interface ChartViewProps {
   onJumpToForensicFocus?: (event: EventRecord) => void;
 }
 
-type ChartDisplayMode = 'ANNUAL' | 'MONTHLY' | 'DAILY' | 'STACK';
+type ChartDisplayMode = 'FULL' | 'ANNUAL' | 'MONTHLY' | 'DAILY' | 'STACK';
 
 export const ChartView: React.FC<ChartViewProps> = ({
   caseRecord,
@@ -66,7 +67,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
   const [activePersonId, setActivePersonId] = useState<string>(
     selectedPersonId || people[0]?.personId || ''
   );
-  const [displayMode, setDisplayMode] = useState<ChartDisplayMode>('ANNUAL');
+  const [displayMode, setDisplayMode] = useState<ChartDisplayMode>('FULL');
   const [selectedYear, setSelectedYear] = useState<number>(Number(caseRecord.primaryIncidentDate.slice(0, 4)) || new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(7); // July default
   const [showEventOverlay, setShowEventOverlay] = useState<boolean>(false);
@@ -158,6 +159,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
   }, [events, currentPerson, caseRecord]);
 
   const handlePrint = () => {
+    if (displayMode === 'ANNUAL' || displayMode === 'MONTHLY') flushSync(() => setDisplayMode('FULL'));
     window.print();
   };
 
@@ -209,6 +211,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
 
         {/* Display Mode Tabs */}
         <div className="flex items-center bg-slate-100 p-1 rounded-md border-2 border-slate-300 text-xs">
+          <button onClick={() => setDisplayMode('FULL')} className={`px-3 py-2 rounded font-bold text-xs ${displayMode === 'FULL' ? 'bg-slate-950 text-white' : 'text-slate-700'}`}>Full chart</button>
           <button
             onClick={() => setDisplayMode('ANNUAL')}
             className={`px-3 py-1 rounded font-bold transition-colors uppercase tracking-wider ${
@@ -320,7 +323,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
         </div>
       )}
 
-      {(displayMode === 'ANNUAL' || displayMode === 'MONTHLY') && (
+      {(displayMode === 'FULL' || displayMode === 'ANNUAL' || displayMode === 'MONTHLY') && (
         <StudentTimeline key={currentPerson.personId} person={currentPerson} mode={displayMode}
           year={selectedYear} month={selectedMonth} onYearChange={setSelectedYear} onMonthChange={setSelectedMonth} />
       )}

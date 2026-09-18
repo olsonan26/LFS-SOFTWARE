@@ -42,3 +42,12 @@ Preserved source row/column order, two dotted rows, right-side labels, split age
 Verified year slider arrow navigation, direct year entry to 2140, December-to-January forward rollover, incident reset, and selected-month marking. At a 390px embedded viewport the chart scroll region measured 302px wide with 760px scrollable content, retaining the full source layout. Browser automation timed out during a subsequent mobile selector read; no claim of an exhaustive mobile interaction audit.
 
 Three source calculation fixture tests and six existing forensic acceptance tests pass. TypeScript and production build pass. Existing forensic compounds intentionally remain a separate date-based annotation layer because their calculations differ from the source student chart; both are explicitly labeled.
+
+# Complete chart report
+Final result: passed for the full-report addition.
+
+The default Full chart now includes the source Report's full name, vowel/name-number stacks, UG, PMEI, explicit birthday, birth-force calculations, P/C values and seasons. Annual focus, Monthly and Extended Cycles render together in source order, with existing annotations intact. Browser verified all three chart sections present simultaneously, 76 highlighted cells for the sample, no page overflow and working year slider. Inspected the full identity section visually.
+
+Print Chart switches Annual/Monthly views to the complete report before opening print. Print CSS removes controls, releases timeline minimum widths, prevents splitting chart panels, and overrides the previous global black/white print rule to preserve source print colors and highlights. A temporary browser harness applied the compiled print rules for visual inspection; verified zero minimum width on Extended Cycles, no horizontal page overflow, correct print RGB values and retained pink pattern backgrounds. Actual printer pagination was not tested. The temporary harness is removed.
+
+TypeScript and production build pass; existing source calculation fixtures pass. Daily and Compare behavior remains unchanged.
