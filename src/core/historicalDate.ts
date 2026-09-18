@@ -20,7 +20,7 @@ const MONTH_NAMES = [
  * - signedYear > 0 means AD/CE (e.g. 6 = 6 AD)
  *
  * Linear math is done through an ordinal axis where 1 BC -> -1 and 1 AD -> 0.
- * That makes 5 BC + 10 years = 6 AD, matching normal historical counting.
+ * Therefore 5 BC + 10 years = 6 AD.
  */
 export function historicalYearToOrdinal(signedYear: number): number {
   if (!Number.isFinite(signedYear) || signedYear === 0) {
@@ -35,9 +35,7 @@ export function ordinalToHistoricalYear(ordinal: number): number {
 }
 
 export function addHistoricalYears(signedYear: number, delta: number): number {
-  return ordinalToHistoricalYear(
-    historicalYearToOrdinal(signedYear) + Math.trunc(delta),
-  );
+  return ordinalToHistoricalYear(historicalYearToOrdinal(signedYear) + Math.trunc(delta));
 }
 
 export function historicalYearDifference(fromYear: number, toYear: number): number {
@@ -72,10 +70,7 @@ export function fromSignedHistoricalYear(signedYear: number): { year: number; er
   if (!Number.isFinite(signedYear) || signedYear === 0) {
     throw new Error('Historical year 0 does not exist.');
   }
-  return {
-    year: Math.abs(Math.trunc(signedYear)),
-    era: signedYear < 0 ? 'BCE' : 'CE',
-  };
+  return { year: Math.abs(Math.trunc(signedYear)), era: signedYear < 0 ? 'BCE' : 'CE' };
 }
 
 export function isLeapYear(year: number): boolean {
@@ -89,37 +84,43 @@ export function daysInHistoricalMonth(year: number, month: number): number {
 }
 
 export function isValidHistoricalDate(year: number, month: number, day: number): boolean {
-  return (
-    Number.isInteger(year) && year >= 1 && year <= 9999 &&
+  return Number.isInteger(year) && year >= 1 && year <= 9999 &&
     Number.isInteger(month) && month >= 1 && month <= 12 &&
-    Number.isInteger(day) && day >= 1 && day <= daysInHistoricalMonth(year, month)
-  );
+    Number.isInteger(day) && day >= 1 && day <= daysInHistoricalMonth(year, month);
 }
 
+/**
+ * CE dates stay ISO-compatible for existing records. BC dates are deliberately
+ * prefixed ("BC 0044-03-15") so legacy browser Date parsing can never silently
+ * reinterpret them as AD dates.
+ */
 export function serializeHistoricalDate(
   year: number,
   month: number,
   day: number,
   era: HistoricalEra,
 ): string {
-  if (!isValidHistoricalDate(year, month, day)) {
-    throw new Error('Invalid historical date.');
-  }
+  if (!isValidHistoricalDate(year, month, day)) throw new Error('Invalid historical date.');
   const core = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  return era === 'BCE' ? `${core} BC` : core;
+  return era === 'BCE' ? `BC ${core}` : core;
 }
 
 export function parseHistoricalDate(value: string): HistoricalDateParts | null {
   if (!value) return null;
-  const normalized = value.trim().toUpperCase();
-  const era: HistoricalEra = /\s(?:BCE|BC)$/.test(normalized) ? 'BCE' : 'CE';
-  const datePart = normalized.replace(/\s(?:BCE|BC|CE|AD)$/, '').trim();
+  const normalized = value.trim().toUpperCase().replace(/\s+/g, ' ');
+  const prefixBce = /^(BC|BCE)\s/.test(normalized);
+  const suffixBce = /\s(BC|BCE)$/.test(normalized);
+  const era: HistoricalEra = prefixBce || suffixBce ? 'BCE' : 'CE';
+  const datePart = normalized
+    .replace(/^(BC|BCE|AD|CE)\s+/, '')
+    .replace(/\s+(BC|BCE|AD|CE)$/, '')
+    .trim();
 
   let year = 0;
   let month = 0;
   let day = 0;
-
   const dash = datePart.split('-');
+
   if (dash.length === 3) {
     if (dash[0].length >= 3) {
       year = Number.parseInt(dash[0], 10);
@@ -147,13 +148,7 @@ export function parseHistoricalDate(value: string): HistoricalDateParts | null {
   }
 
   if (!isValidHistoricalDate(year, month, day)) return null;
-  return {
-    year,
-    month,
-    day,
-    era,
-    signedYear: toSignedHistoricalYear(year, era),
-  };
+  return { year, month, day, era, signedYear: toSignedHistoricalYear(year, era) };
 }
 
 export function formatHistoricalDate(value: string): string {
@@ -168,11 +163,13 @@ export function formatHistoricalMonthYear(signedYear: number, month: number): st
 
 export function parseHistoricalYearInput(value: string): number | null {
   const normalized = value.trim().toUpperCase().replace(/\s+/g, ' ');
-  const match = /^(\d{1,4})\s*(BC|BCE|AD|CE)?$/.exec(normalized);
+  const prefix = /^(BC|BCE|AD|CE)\s+(\d{1,4})$/.exec(normalized);
+  const suffix = /^(\d{1,4})\s*(BC|BCE|AD|CE)?$/.exec(normalized);
+  const match = prefix ? { year: prefix[2], era: prefix[1] } : suffix ? { year: suffix[1], era: suffix[2] } : null;
   if (!match) return null;
-  const year = Number.parseInt(match[1], 10);
+  const year = Number.parseInt(match.year, 10);
   if (year < 1 || year > 9999) return null;
-  const era = match[2] === 'BC' || match[2] === 'BCE' ? 'BCE' : 'CE';
+  const era = match.era === 'BC' || match.era === 'BCE' ? 'BCE' : 'CE';
   return toSignedHistoricalYear(year, era);
 }
 
