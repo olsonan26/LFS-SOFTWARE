@@ -1,12 +1,19 @@
 import React, { useEffect, useRef } from "react";
 import { ArrowRight, ChevronDown, X, FolderOpen } from "lucide-react";
+import { formatHistoricalDate, parseHistoricalDate } from "../core/historicalDate.ts";
+
 export const humanize = (value: string) =>
   value
     .toLowerCase()
     .replace(/_/g, " ")
     .replace(/^./, (s) => s.toUpperCase());
+
 export const displayDate = (value: string) => {
   if (!value) return "Date not recorded";
+  const historical = parseHistoricalDate(value);
+  if (historical?.era === "BCE" || (historical && historical.year < 1000)) {
+    return formatHistoricalDate(value);
+  }
   const d = new Date(value.length === 10 ? value + "T12:00:00" : value);
   return Number.isNaN(d.getTime())
     ? value
@@ -16,6 +23,7 @@ export const displayDate = (value: string) => {
         year: "numeric",
       });
 };
+
 export function PageHeading({
   eyebrow,
   title,

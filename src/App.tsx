@@ -21,9 +21,9 @@ import { MethodologyView } from "./components/MethodologyView.tsx";
 import { BlindAnalysisView } from "./components/BlindAnalysisView.tsx";
 import {
   NewCaseModal,
-  NewPersonModal,
   NewEventModal,
 } from "./components/Modals.tsx";
+import { HistoricalNewPersonModal } from "./components/HistoricalNewPersonModal.tsx";
 import { InteractiveTutorial } from "./components/InteractiveTutorial.tsx";
 
 import {
@@ -371,7 +371,7 @@ export default function App() {
         onClose={() => setIsNewCaseOpen(false)}
         onSubmit={handleCreateCase}
       />
-      <NewPersonModal
+      <HistoricalNewPersonModal
         key={activeCase.caseId + String(isNewPersonOpen)}
         isOpen={isNewPersonOpen}
         onClose={() => setIsNewPersonOpen(false)}

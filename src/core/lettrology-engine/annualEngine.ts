@@ -13,17 +13,23 @@ import { getOrdinalLetterValue } from './letterValues.ts';
 import {
   reduceWithTrail,
   CompoundValue,
-  formatCompound,
-  formatShortCompound,
 } from './compoundTrail.ts';
 import {
   buildPersonNameCycles,
   getActiveLettersAtAge,
-  PersonNameCycles,
 } from './timelineEngine.ts';
+import {
+  addHistoricalYears,
+  formatHistoricalYear,
+  historicalYearDifference,
+  parseHistoricalDate,
+  previousHistoricalYear,
+  type HistoricalEra,
+} from '../historicalDate.ts';
 
 export interface AnnualState {
   age: number;
+  /** Signed display year: negative = BC, positive = AD. Zero is never emitted. */
   calendarYear: number;
   firstLetter: string;
   middleLetters: string[];
@@ -50,65 +56,37 @@ export interface AnnualState {
 export interface ParsedDob {
   day: number;
   month: number;
+  /** Signed display year: -44 = 44 BC, 44 = 44 AD. */
   year: number;
+  yearNumber: number;
+  era: HistoricalEra;
 }
+
+export type AnnualRangeMode = 'AUTO' | 'AGE' | 'YEAR';
 
 export function parseDob(dobStr: string): ParsedDob {
-  let day = 1;
-  let month = 1;
-  let year = 1970;
-
-  if (dobStr.includes('-')) {
-    const segments = dobStr.split('-');
-    if (segments[0].length === 4) {
-      year = parseInt(segments[0], 10);
-      month = parseInt(segments[1], 10);
-      day = parseInt(segments[2], 10);
-    } else {
-      day = parseInt(segments[0], 10);
-      month = parseInt(segments[1], 10);
-      year = parseInt(segments[2], 10);
-    }
-  } else if (dobStr.includes('/')) {
-    const segments = dobStr.split('/');
-    if (segments[2]?.length === 4) {
-      // MM/DD/YYYY or DD/MM/YYYY - detect if segments[0] > 12
-      const first = parseInt(segments[0], 10);
-      const second = parseInt(segments[1], 10);
-      year = parseInt(segments[2], 10);
-      if (first > 12) {
-        day = first;
-        month = second;
-      } else {
-        month = first;
-        day = second;
-      }
-    }
+  const parsed = parseHistoricalDate(dobStr);
+  if (!parsed) {
+    return { day: 1, month: 1, year: 1970, yearNumber: 1970, era: 'CE' };
   }
-
-  return { day, month, year };
+  return {
+    day: parsed.day,
+    month: parsed.month,
+    year: parsed.signedYear,
+    yearNumber: parsed.year,
+    era: parsed.era,
+  };
 }
 
-/**
- * Calculates Calendar Year (CY) (Section 15):
- * Sum digits of selected calendar year -> reduce to root.
- * Example: 2025 -> 2+0+2+5 = 9.
- */
+/** Calendar Year: sum the visible year digits and reduce. Era sign is not summed. */
 export function calculateCalendarYear(year: number): CompoundValue {
   const digits = Math.abs(year).toString().split('').map(Number);
   const sum = digits.reduce((a, b) => a + b, 0);
   return reduceWithTrail(sum, {
-    rawFormula: `CY ${year} digits (${digits.join('+')}) = ${sum}`,
+    rawFormula: `CY ${formatHistoricalYear(year)} digits (${digits.join('+')}) = ${sum}`,
   });
 }
 
-/**
- * Calculates Personal Year (PY) (Section 16.1):
- * Formula: Birth Day + Birth Month + reduced Calendar Year.
- * Preserve the compound total.
- * Example: 28 June, selected year 2025:
- * Day 28 + Month 6 + reduced CY 9 = 43 -> 7. Display: PY 43/7.
- */
 export function calculatePersonalYear(
   birthDay: number,
   birthMonth: number,
@@ -120,39 +98,19 @@ export function calculatePersonalYear(
   });
 }
 
-/**
- * Calculates Essence (ESS) (Section 12):
- * Sum of full alphabet positions A=1..Z=26 for all active letters.
- * Preserve upper compound trail and reduce to lower root.
- * Example: N(14) + E(5) + M(13) = 32 -> 5 (ESS 32/5).
- */
 export function calculateEssence(activeLetters: string[]): {
   compound: CompoundValue;
   ordinals: { letter: string; value: number }[];
 } {
-  const ordinals = activeLetters.map(l => ({
-    letter: l,
-    value: getOrdinalLetterValue(l),
-  }));
-
+  const ordinals = activeLetters.map(l => ({ letter: l, value: getOrdinalLetterValue(l) }));
   const rawSum = ordinals.reduce((acc, o) => acc + o.value, 0);
   const formula = ordinals.map(o => `${o.letter}(${o.value})`).join(' + ') + ` = ${rawSum}`;
-
-  const compound = reduceWithTrail(rawSum, {
-    rawFormula: formula,
-  });
-
   return {
-    compound,
+    compound: reduceWithTrail(rawSum, { rawFormula: formula }),
     ordinals,
   };
 }
 
-/**
- * Calculates Yearly Combiner (COM) (Section 17.1):
- * Formula: ESS stored raw operand + PY stored raw operand.
- * Example: ESS 32 + PY 43 = 75 -> 12 -> 3 (COM 75/12/3).
- */
 export function calculateYearlyCombiner(
   essRaw: number,
   pyRaw: number
@@ -164,84 +122,76 @@ export function calculateYearlyCombiner(
 }
 
 /**
- * Generates the full Annual Time-Map for a person from startYear to endYear
- * (or from birthYear to birthYear + maxAge).
- * Each row corresponds to a Calendar Year.
- * For subjects born later in the year (months 2-12), the age at January 1
- * is (calendarYear - birthYear - 1) for year > birthYear, which aligns the pre-birthday
- * active Essence with the calendar year PY.
+ * Generates annual states across modern or ancient history.
+ *
+ * Calendar-year storage uses signed display years (-5 = 5 BC, +6 = 6 AD),
+ * but all elapsed-year math uses the no-year-zero historical ordinal axis.
+ * Example: 5 BC + 10 years -> 6 AD.
  */
 export function generateAnnualTimeMap(
   birthName: string,
   dobStr: string,
   startYearOrAge: number = 0,
-  endYearOrAge: number = 100
+  endYearOrAge: number = 100,
+  rangeMode: AnnualRangeMode = 'AUTO',
 ): AnnualState[] {
   const dob = parseDob(dobStr);
   const cycles = buildPersonNameCycles(birthName);
   const states: AnnualState[] = [];
 
-  // Determine if caller passed ages (e.g. 0..100) or calendar years (e.g. 1971..2071)
   let startYear: number;
   let endYear: number;
+  const autoLooksLikeYear = startYearOrAge < 0 || endYearOrAge < 0 || startYearOrAge > 1800 || endYearOrAge > 1800;
+  const useYears = rangeMode === 'YEAR' || (rangeMode === 'AUTO' && autoLooksLikeYear);
 
-  if (startYearOrAge > 1800) {
+  if (useYears) {
     startYear = startYearOrAge;
-    endYear = endYearOrAge > 1800 ? endYearOrAge : startYearOrAge + 100;
+    endYear = endYearOrAge;
   } else {
-    startYear = dob.year + startYearOrAge;
-    endYear = dob.year + endYearOrAge;
+    startYear = addHistoricalYears(dob.year, startYearOrAge);
+    endYear = addHistoricalYears(dob.year, endYearOrAge);
   }
 
-  for (let calendarYear = startYear; calendarYear <= endYear; calendarYear++) {
-    // Determine active age for this calendar year:
-    // On January 1 when CY and PY take effect:
-    // If born in months 2..12 (after January 1), age on Jan 1 is calendarYear - dob.year - 1 (min 0)
-    // For birth year, age is 0.
+  if (startYear === 0 || endYear === 0) {
+    throw new Error('Historical year 0 does not exist.');
+  }
+
+  const span = historicalYearDifference(startYear, endYear);
+  if (span < 0) return states;
+
+  for (let offset = 0; offset <= span; offset++) {
+    const calendarYear = addHistoricalYears(startYear, offset);
+    const elapsedYears = historicalYearDifference(dob.year, calendarYear);
+    if (elapsedYears < 0) continue;
+
     let age: number;
-    if (calendarYear === dob.year) {
+    if (elapsedYears === 0) {
       age = 0;
     } else if (dob.month > 1) {
-      age = Math.max(0, calendarYear - dob.year - 1);
+      age = Math.max(0, elapsedYears - 1);
     } else {
-      age = Math.max(0, calendarYear - dob.year);
+      age = elapsedYears;
     }
 
     const { firstLetter, middleLetters, surnameLetter, allActiveLetters } =
       getActiveLettersAtAge(cycles, age);
 
-    // 1. Essence
     const { compound: ess, ordinals } = calculateEssence(allActiveLetters);
-
-    // 2. Calendar Year
     const cy = calculateCalendarYear(calendarYear);
-
-    // 3. Personal Year
     const py = calculatePersonalYear(dob.day, dob.month, cy.root);
-
-    // 4. Yearly Combiner (COM)
     const com = calculateYearlyCombiner(ess.raw, py.raw);
-
-    // 5. Intensification: ESS root == PY root
     const isIntensified = ess.root === py.root;
 
-    // 6. Power Numbers check in ESS, PY, or COM (11, 13, 16)
     const powerNumbers: (11 | 13 | 16)[] = [];
     if (ess.isPowerNumber && ess.powerNumber) powerNumbers.push(ess.powerNumber);
-    if (py.isPowerNumber && py.powerNumber && !powerNumbers.includes(py.powerNumber)) {
-      powerNumbers.push(py.powerNumber);
-    }
-    if (com.isPowerNumber && com.powerNumber && !powerNumbers.includes(com.powerNumber)) {
-      powerNumbers.push(com.powerNumber);
-    }
+    if (py.isPowerNumber && py.powerNumber && !powerNumbers.includes(py.powerNumber)) powerNumbers.push(py.powerNumber);
+    if (com.isPowerNumber && com.powerNumber && !powerNumbers.includes(com.powerNumber)) powerNumbers.push(com.powerNumber);
 
-    // 7. Cycle Reset check (9 -> 1)
-    const prevCY = calculateCalendarYear(calendarYear - 1);
+    const previousYear = previousHistoricalYear(calendarYear);
+    const prevCY = calculateCalendarYear(previousYear);
     const prevPY = calculatePersonalYear(dob.day, dob.month, prevCY.root);
     const isCycleReset = prevPY.root === 9 && py.root === 1;
 
-    // 8. Birthday-Lapse Diagonal (Section 21.3)
-    // After birthday, subject links to next-age ESS while current PY remains active.
     const nextAgeLetters = getActiveLettersAtAge(cycles, age + 1);
     const nextEss = calculateEssence(nextAgeLetters.allActiveLetters);
     const lapseCombinedRaw = py.raw + nextEss.compound.raw;
