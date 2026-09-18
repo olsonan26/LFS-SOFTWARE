@@ -1,6 +1,7 @@
 // Ported from olsonan26/Chartcreation-for-students, commit 7d12ffb23397b9f8ab0dbafb7a41072b9f2fc63a.
 // Row order, spacing model and Report calculations retained. Cell annotations are additive.
 import { createContext, useContext, type CSSProperties } from 'react';
+import { yearTrails, monthTrails } from "./compounds";
 import { Report, type MonthsSet } from './numerology';
 export type CellAnnotation = { title: string; warning: boolean; selected?: boolean };
 export const TimelineAnnotations = createContext<Record<string, CellAnnotation[]>>({});
@@ -14,11 +15,13 @@ function PrintCharacterRow({
   length,
   tone = "black",
   label = "",
+  trails,
 }: {
   value: string;
   length: number;
   tone?: PrintTone;
   label?: string;
+  trails?: string[];
 }) {
   const annotations = useContext(TimelineAnnotations);
   const characters = Array.from(value.padEnd(length, " ").slice(0, length));
@@ -27,7 +30,7 @@ function PrintCharacterRow({
     <div className="print-data-row">
       <div className={`print-character-row print-tone-${tone}`} style={style}>
         {characters.map((character, index) => (
-          <span key={index} title={annotations[label]?.[index]?.title}
+          <span key={index} title={[trails?.[index] ? `${label}: ${trails[index]} (source chart calculation)` : undefined, annotations[label]?.[index]?.title].filter(Boolean).join("\n") || undefined}
             className={[annotations[label]?.[index]?.warning ? "timeline-pattern-cell" : "", annotations[label]?.[index]?.selected ? "timeline-selected-month" : ""].filter(Boolean).join(" ") || undefined}
             data-pattern={annotations[label]?.[index]?.warning || undefined}
           >{character === " " ? "\u00a0" : character}</span>
@@ -74,10 +77,10 @@ export function PrintYearSection({
       {Array.from({ length: PRINT_DOTTED_ROWS }, (_, index) => (
         <PrintCharacterRow key={`dots-${index}`} value={":".repeat(length)} length={length} tone="red" />
       ))}
-      <PrintCharacterRow value={set.essence} length={length} tone="blue" label="ESS" />
-      <PrintCharacterRow value={set.combined} length={length} tone="cyan" label="COM" />
-      <PrintCharacterRow value={set.personalYear} length={length} tone="blue" label="PY" />
-      <PrintCharacterRow value={set.calendarYear} length={length} tone="green" label="CY" />
+      <PrintCharacterRow trails={Array.from({length}, (_, i) => yearTrails(report, start + i).ESS)} value={set.essence} length={length} tone="blue" label="ESS" />
+      <PrintCharacterRow trails={Array.from({length}, (_, i) => yearTrails(report, start + i).COM)} value={set.combined} length={length} tone="cyan" label="COM" />
+      <PrintCharacterRow trails={Array.from({length}, (_, i) => yearTrails(report, start + i).PY)} value={set.personalYear} length={length} tone="blue" label="PY" />
+      <PrintCharacterRow trails={Array.from({length}, (_, i) => yearTrails(report, start + i).CY)} value={set.calendarYear} length={length} tone="green" label="CY" />
     </section>
   );
 }
@@ -99,12 +102,13 @@ export function PrintMonthSection({
 
   return (
     <section className="print-month-section" aria-label={`Three year monthly cycles centered on ${focusYear}`}>
-      <PrintCharacterRow value={join((set) => set.essence)} length={36} tone="red" label="ESS" />
-      <PrintCharacterRow value={join((set) => set.personalMonthEssence)} length={36} tone="blue" label="PME" />
-      <PrintCharacterRow value={join((set) => set.combined)} length={36} tone="cyan" label="MCOM" />
-      <PrintCharacterRow value={join((set) => set.personalMonth)} length={36} tone="blue" label="PM" />
+      <div className="print-month-ages">{ages.map(age => <span key={age}>{age < 0 ? "Before birth" : `Age ${age}`}</span>)}</div>
+      <PrintCharacterRow value={join((set) => set.essence)} length={36} tone="red" trails={ages.flatMap(age => Array.from({length:12}, (_, i) => monthTrails(report, age, i+1).ESS))} label="ESS" />
+      <PrintCharacterRow value={join((set) => set.personalMonthEssence)} length={36} tone="blue" trails={ages.flatMap(age => Array.from({length:12}, (_, i) => monthTrails(report, age, i+1).PME))} label="PME" />
+      <PrintCharacterRow value={join((set) => set.combined)} length={36} tone="cyan" trails={ages.flatMap(age => Array.from({length:12}, (_, i) => monthTrails(report, age, i+1).MCOM))} label="MCOM" />
+      <PrintCharacterRow value={join((set) => set.personalMonth)} length={36} tone="blue" trails={ages.flatMap(age => Array.from({length:12}, (_, i) => monthTrails(report, age, i+1).PM))} label="PM" />
       <PrintCharacterRow value={MONTHS.join("").repeat(3)} length={36} tone="green" label="CM" />
-      <PrintCharacterRow value={join((set) => set.personalYear)} length={36} tone="red" label="PY" />
+      <PrintCharacterRow value={join((set) => set.personalYear)} length={36} tone="red" trails={ages.flatMap(age => Array.from({length:12}, (_, i) => monthTrails(report, age, i+1).PY))} label="PY" />
       <div className="print-month-years">
         {ages.map((age) => <span key={age}>{birthYear + age}</span>)}
       </div>
