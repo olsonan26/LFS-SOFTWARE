@@ -1,0 +1,65 @@
+.student-timeline { min-width: 0; display: grid; gap: 1rem; }
+.timeline-navigation { display:flex; flex-wrap:wrap; align-items:center; gap:1rem; padding:1rem; background:var(--surface); border:1px solid var(--border); border-radius:10px; }
+.timeline-navigation h2 { margin:0; font-size:1.1rem; }
+.timeline-navigation p { margin:0; font-size:.8rem; color:var(--muted); }
+.timeline-navigation label { display:grid; gap:.3rem; font-size:.8rem; }
+.timeline-year-input { margin-left:auto; }
+.timeline-year-input input { width:7rem; min-height:46px; padding:.35rem .6rem; border:1px solid var(--border); border-radius:6px; background:var(--raised); color:var(--ink); }
+.timeline-year-slider { flex:1 1 240px; }
+.student-timeline input[type=range] { width:100%; min-height:46px; accent-color:var(--gold); cursor:pointer; }
+.timeline-month-controls { display:flex; align-items:center; gap:.7rem; flex:1 1 100%; }
+.timeline-month-controls label { flex:1; }
+.timeline-chart-card, .timeline-extended, .timeline-warning-panel { border:1px solid var(--border); border-radius:10px; overflow:hidden; background:var(--surface); }
+.timeline-chart-card h3, .timeline-extended summary { padding:.9rem 1rem; margin:0; font-size:.95rem; color:var(--gold); }
+.student-chart-paper { padding:1rem; background:#fffefa; color:#07111c; color-scheme:light; }
+/* Source chart geometry and exact screen colors; scoped to protect Daily/Compare. */
+.student-timeline .print-panel-scroll { width:100%; overflow-x:auto; overscroll-behavior-x:contain; scrollbar-color:#ae7a2e #f2e5cd; }
+.student-timeline .print-panel-scroll:focus-visible { outline:3px solid #b7791f; outline-offset:4px; }
+.student-timeline .print-year-section, .student-timeline .print-month-section { width:100%; padding:4px 0; display:flex; flex-direction:column; justify-content:space-between; }
+.student-timeline .print-year-focus { min-width:720px; min-height:350px; }
+.student-timeline .print-month-section { position:relative; min-width:760px; min-height:270px; }
+.student-timeline .print-year-lifetime { min-width:1120px; min-height:390px; }
+.student-timeline .print-data-row { min-height:28px; display:grid; grid-template-columns:minmax(0,1fr) 58px; align-items:center; }
+.student-timeline .print-character-row { min-width:0; display:grid; grid-template-columns:repeat(var(--print-columns),minmax(0,1fr)); align-items:center; color:#07111c; font:700 .8rem/1 "Courier New",Courier,monospace; }
+.student-timeline .print-character-row span { min-width:0; text-align:center; font:inherit; padding:4px 0; }
+.student-timeline .print-row-label { padding-left:10px; font:700 .7rem/1 "Courier New",Courier,monospace; }
+.student-timeline .print-month-section::after { content:""; position:absolute; top:0; bottom:34px; left:calc((100% - 58px)/3); width:calc((100% - 58px)/3); border:2px solid #b7791f; pointer-events:none; }
+.student-timeline .print-month-years { width:calc(100% - 58px); display:grid; grid-template-columns:repeat(3,1fr); padding-top:8px; color:#07111c; font:700 .8rem/1 "Courier New",Courier,monospace; text-align:center; }
+.student-timeline .print-tone-black { color:#07111c; }
+.student-timeline .print-tone-red { color:#d60000; }
+.student-timeline .print-tone-blue { color:#153dd1; }
+.student-timeline .print-tone-cyan { color:#008ea1; }
+.student-timeline .print-tone-green { color:#078a24; }
+.student-timeline .timeline-pattern-cell { outline:1px solid #ef4444; outline-offset:-1px; border-radius:3px; background:#fee2e2; }
+.timeline-caption { padding:.6rem 1rem; margin:0; font-size:.75rem; color:var(--muted); }
+.timeline-warning-panel { padding:1rem; }
+.timeline-warning-panel h3 { margin:0; font-size:.95rem; }
+.timeline-warning-panel p { color:var(--muted); font-size:.75rem; max-width:80ch; }
+.timeline-pattern-options { display:flex; flex-wrap:wrap; gap:1rem; font-size:.75rem; }
+.timeline-pattern-options label { display:flex; align-items:center; gap:.4rem; min-height:46px; }
+.timeline-compounds { display:flex; gap:1rem; flex-wrap:wrap; }
+.timeline-compounds dt { font-size:.7rem; color:var(--muted); }
+.timeline-compounds dd { margin:0; padding:.2rem .4rem; }
+.timeline-compounds small { font-size:.65rem; }
+.timeline-flags { display:flex; flex-wrap:wrap; gap:.5rem; font-size:.75rem; }
+.forensic-power { background:#fee2e2; border:1px solid #f87171; color:#450a0a; border-radius:4px; padding:.2rem .4rem; }
+.forensic-intensified { background:#f3e8ff; border:1px solid #c084fc; color:#3b0764; border-radius:4px; padding:.2rem .4rem; }
+.forensic-reset { background:#dbeafe; border:1px solid #60a5fa; color:#172554; border-radius:4px; padding:.2rem .4rem; }
+@media(max-width:600px) { .timeline-year-input { margin-left:0; } .timeline-navigation>div:first-child { width:100%; } }
+@media print {
+ .student-timeline .timeline-navigation, .student-timeline .timeline-pattern-options { display:none; }
+ .student-timeline .print-panel-scroll { overflow:visible; }
+ .student-timeline .print-year-section, .student-timeline .print-month-section { min-width:0; }
+ .student-timeline .print-character-row, .student-timeline .print-row-label, .student-timeline .print-month-years { font:700 6.8pt/1 "Courier New",Courier,monospace !important; }
+ .student-timeline .print-tone-red { color:#e00000; }
+ .student-timeline .print-tone-cyan { color:#16a7b8; }
+ .student-timeline .print-tone-green { color:#16a02e; }
+ .student-chart-paper { print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+}
+
+.timeline-warning-list { margin-top:.8rem; border-top:1px solid var(--border); padding-top:.6rem; font-size:.8rem; }
+.timeline-warning-list>div { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:.5rem; padding-top:.5rem; }
+.timeline-warning-list button { display:grid; text-align:left; }
+.timeline-warning-list button span { font-size:.7rem; color:var(--muted); }
+
+.student-timeline .timeline-selected-month { outline:2px solid #b7791f; outline-offset:-2px; background:#fff1cb; }

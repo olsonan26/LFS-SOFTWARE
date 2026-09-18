@@ -30,3 +30,15 @@ The existing application uses seeded/in-memory case data. This change adds no se
 
 ## Evidence
 See docs/design/hub.png and docs/design/reference-comparison.jpg for the desktop implementation and reference comparison.
+
+# Annual and Monthly student-chart port — September 18, 2026
+
+Final result: passed for this chart change.
+
+Reference: Chartcreation-for-students commit 7d12ffb23397b9f8ab0dbafb7a41072b9f2fc63a. Rendered its original chart functions locally using the same Julian Blackwood fixture, date and year as the destination, and visually inspected both charts. Browser DOM comparison confirmed all Annual focus and Monthly character rows and computed RGB colors equal the source.
+
+Preserved source row/column order, two dotted rows, right-side labels, split age markers, current-age star, three monthly year bands and center-year border. Intentional adaptations: larger readable monospace figures, existing navy/gold controls, neutral light chart paper, original forensic pattern annotations and selected-month outline. Source calculation module is byte-identical. Daily and Compare renderer blocks are byte-identical to the pre-change main branch; their engines are untouched.
+
+Verified year slider arrow navigation, direct year entry to 2140, December-to-January forward rollover, incident reset, and selected-month marking. At a 390px embedded viewport the chart scroll region measured 302px wide with 760px scrollable content, retaining the full source layout. Browser automation timed out during a subsequent mobile selector read; no claim of an exhaustive mobile interaction audit.
+
+Three source calculation fixture tests and six existing forensic acceptance tests pass. TypeScript and production build pass. Existing forensic compounds intentionally remain a separate date-based annotation layer because their calculations differ from the source student chart; both are explicitly labeled.
