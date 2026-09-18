@@ -6,7 +6,8 @@
 
 import { AnnualState, generateAnnualTimeMap, parseDob } from './annualEngine.ts';
 import { MonthlyState, generateMonthlyCalendar } from './monthlyEngine.ts';
-import { formatCompound, formatShortCompound } from './compoundTrail.ts';
+import { formatCompound } from './compoundTrail.ts';
+import { formatHistoricalYear, historicalYearDifference } from '../historicalDate.ts';
 
 export interface PersonStackInput {
   personId: string;
@@ -67,9 +68,6 @@ export interface StackGroupFindings {
   observations: string[];
 }
 
-/**
- * Computes Annual Stack alignment across multiple individuals for a specific calendar year.
- */
 export function computeAnnualStack(
   people: PersonStackInput[],
   targetYear: number
@@ -85,19 +83,17 @@ export function computeAnnualStack(
 
   for (const person of people) {
     const dob = parseDob(person.dob);
-    const age = targetYear - dob.year;
-    if (age < 0 || age > 120) continue;
+    const age = historicalYearDifference(dob.year, targetYear);
+    if (age < 0) continue;
 
-    const timeMap = generateAnnualTimeMap(person.name, person.dob, age, age);
+    const timeMap = generateAnnualTimeMap(person.name, person.dob, age, age, 'AGE');
     const annual = timeMap[0];
     if (!annual) continue;
 
     if (annual.isIntensified) intensCount++;
     if (annual.isPowerNumber) {
       powerCount++;
-      for (const pn of annual.powerNumbers) {
-        powerMap[pn] = (powerMap[pn] || 0) + 1;
-      }
+      for (const pn of annual.powerNumbers) powerMap[pn] = (powerMap[pn] || 0) + 1;
     }
 
     if (!pyMap[annual.py.root]) pyMap[annual.py.root] = [];
@@ -128,25 +124,15 @@ export function computeAnnualStack(
     });
   }
 
-  // Generate objective, un-hyped research observations
   const observations: string[] = [];
+  const yearLabel = formatHistoricalYear(targetYear);
   if (powerCount > 0) {
-    observations.push(
-      `${powerCount} of ${items.length} subjects have authentic Power Numbers active in year ${targetYear}.`
-    );
+    observations.push(`${powerCount} of ${items.length} subjects have authentic Power Numbers active in ${yearLabel}.`);
   }
   for (const [pyRoot, names] of Object.entries(pyMap)) {
-    if (names.length > 1) {
-      observations.push(
-        `${names.length} subjects (${names.join(', ')}) share Personal Year ${pyRoot} in year ${targetYear}.`
-      );
-    }
+    if (names.length > 1) observations.push(`${names.length} subjects (${names.join(', ')}) share Personal Year ${pyRoot} in ${yearLabel}.`);
   }
-  if (intensCount > 0) {
-    observations.push(
-      `${intensCount} subject(s) exhibit active Intensification (ESS root == PY root) in year ${targetYear}.`
-    );
-  }
+  if (intensCount > 0) observations.push(`${intensCount} subject(s) exhibit active Intensification (ESS root == PY root) in ${yearLabel}.`);
 
   return {
     items,
@@ -161,13 +147,10 @@ export function computeAnnualStack(
   };
 }
 
-/**
- * Computes Monthly Stack alignment across multiple individuals for a specific year and month.
- */
 export function computeMonthlyStack(
   people: PersonStackInput[],
   targetYear: number,
-  targetMonth: number // 1..12
+  targetMonth: number
 ): {
   items: PersonMonthlyStackItem[];
   findings: StackGroupFindings;
@@ -179,10 +162,10 @@ export function computeMonthlyStack(
 
   for (const person of people) {
     const dob = parseDob(person.dob);
-    const age = targetYear - dob.year;
-    if (age < 0 || age > 120) continue;
+    const age = historicalYearDifference(dob.year, targetYear);
+    if (age < 0) continue;
 
-    const timeMap = generateAnnualTimeMap(person.name, person.dob, age, age + 1);
+    const timeMap = generateAnnualTimeMap(person.name, person.dob, age, age + 1, 'AGE');
     const annual = timeMap[0];
     const nextAnnual = timeMap[1];
     if (!annual) continue;
@@ -193,9 +176,7 @@ export function computeMonthlyStack(
 
     if (month.isPowerMonth) {
       powerCount++;
-      for (const pn of month.powerNumbers) {
-        powerMap[pn] = (powerMap[pn] || 0) + 1;
-      }
+      for (const pn of month.powerNumbers) powerMap[pn] = (powerMap[pn] || 0) + 1;
     }
 
     if (!pyMap[month.py.root]) pyMap[month.py.root] = [];
@@ -223,9 +204,7 @@ export function computeMonthlyStack(
 
   const observations: string[] = [];
   if (powerCount > 0) {
-    observations.push(
-      `${powerCount} of ${items.length} subjects have authentic Power Numbers active in ${monthNames[targetMonth - 1]} ${targetYear}.`
-    );
+    observations.push(`${powerCount} of ${items.length} subjects have authentic Power Numbers active in ${monthNames[targetMonth - 1]} ${formatHistoricalYear(targetYear)}.`);
   }
 
   return {
