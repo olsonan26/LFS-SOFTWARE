@@ -43,14 +43,23 @@ export function StudentTimeline({ person, mode, year, month, onYearChange, onMon
   const focusAge = Math.max(0, requestedAge);
   const focusYear = addHistoricalYears(birthYear, focusAge);
   const maxCalendarAge = Math.max(0, historicalYearDifference(birthYear, 9999));
-  const maxAge = Math.min(maxCalendarAge, Math.max(119, focusAge + 20));
+  const [timelineRangeMax, setTimelineRangeMax] = useState(() => Math.min(maxCalendarAge, Math.max(119, focusAge + 20)));
+  const maxAge = timelineRangeMax;
   const reportCurrentYear = parsedDob.year + focusAge;
   const report = useMemo(() => new Report(normalizeName(person.verifiedBirthName).toUpperCase(), formatReportDob(person.dob), reportCurrentYear), [person.verifiedBirthName, person.dob, reportCurrentYear]);
   const start = Math.max(0, focusAge - 14);
   const extendedStart = Math.max(0, focusAge - 40);
   const [fitSheet, setFitSheet] = useState(true);
   const [sheetScale, setSheetScale] = useState(1);
+  const [chartZoom, setChartZoom] = useState(100);
   const sheetViewport = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (focusAge > timelineRangeMax) {
+      setTimelineRangeMax(Math.min(maxCalendarAge, Math.max(focusAge + 20, timelineRangeMax)));
+    }
+  }, [focusAge, maxCalendarAge, timelineRangeMax]);
+
   useEffect(() => {
     const viewport = sheetViewport.current;
     if (!viewport || mode !== 'FULL') return;
@@ -59,6 +68,7 @@ export function StudentTimeline({ person, mode, year, month, onYearChange, onMon
     observer.observe(viewport); window.addEventListener('resize', resize); resize();
     return () => { observer.disconnect(); window.removeEventListener('resize', resize); };
   }, [mode]);
+
   const [showPatterns, setShowPatterns] = useState(true);
   const [showDiagonals, setShowDiagonals] = useState(true);
   const [showIntensifiers, setShowIntensifiers] = useState(true);
@@ -135,21 +145,26 @@ export function StudentTimeline({ person, mode, year, month, onYearChange, onMon
   const focusRangeEnd = formatHistoricalYear(addHistoricalYears(birthYear, start + 29));
   const monthRangeStart = formatHistoricalYear(addHistoricalYears(focusYear, -1));
   const monthRangeEnd = formatHistoricalYear(addHistoricalYears(focusYear, 1));
+  const effectiveSheetZoom = mode === 'FULL' ? (fitSheet ? sheetScale : 1) * (chartZoom / 100) : 1;
 
   return <section className={`student-timeline ${mode === 'FULL' ? 'complete-chart' : ''}`} aria-label={`${mode === 'FULL' ? 'Full chart report' : mode === 'ANNUAL' ? 'Annual student timeline' : 'Monthly student timeline'}`}>
     <div className="timeline-navigation">
       <div><h2>{mode === 'FULL' ? 'Chart time controls' : mode === 'ANNUAL' ? 'Annual timeline' : 'Monthly timeline'}</h2><p>{person.displayName} · {dateLabel(focusYear,mode === 'MONTHLY' ? month : undefined)} · Age {focusAge}</p></div>
       <label className="timeline-year-input">Go to year<input aria-label="Go to timeline year, for example 44 BC or 2026 AD" type="text" key={focusYear} defaultValue={formatHistoricalYear(focusYear)} onBlur={e => {if(e.target.value) changeYearText(e.target.value); e.target.value = formatHistoricalYear(focusYear);}} onKeyDown={e => {if(e.key === 'Enter') e.currentTarget.blur();}} /></label>
-      <label className="timeline-year-slider">Year: {formatHistoricalYear(focusYear)}<input aria-label="Timeline age slider" type="range" min={0} max={maxAge} value={focusAge} onChange={e => changeYear(addHistoricalYears(birthYear,Number(e.target.value)))} /></label>
+      <label className="timeline-year-slider">Timeline position · {formatHistoricalYear(focusYear)} · Age {focusAge}<input aria-label="Timeline position slider" type="range" min={0} max={maxAge} value={Math.min(focusAge, maxAge)} onChange={e => changeYear(addHistoricalYears(birthYear,Number(e.target.value)))} /></label>
       {mode !== 'ANNUAL' && <div className="timeline-month-controls">
         <button className="secondary-button" aria-label="Previous timeline month" disabled={focusAge === 0 && month === 1} onClick={() => changeMonth(-1)}><ChevronLeft size={20}/></button>
         <label>Month: {months[month-1]}<input aria-label="Timeline month slider" type="range" min={1} max={12} value={month} onChange={e => onMonthChange(Number(e.target.value))}/></label>
         <button className="secondary-button" aria-label="Next timeline month" disabled={focusAge === maxCalendarAge && month === 12} onClick={() => changeMonth(1)}><ChevronRight size={20}/></button>
       </div>}
     </div>
-    {mode === 'FULL' && <div className="sheet-view-controls"><button className="secondary-button" aria-pressed={fitSheet} onClick={() => {setFitSheet(!fitSheet); sheetViewport.current?.scrollIntoView({block:'start'});}}>{fitSheet ? 'Enlarge for reading' : 'Fit complete sheet'}</button><span>Full chart · One-page print layout</span></div>}
+    {mode === 'FULL' && <div className="sheet-view-controls">
+      <button className="secondary-button" aria-pressed={fitSheet} onClick={() => {setFitSheet(!fitSheet); sheetViewport.current?.scrollIntoView({block:'start'});}}>{fitSheet ? 'Enlarge for reading' : 'Fit complete sheet'}</button>
+      <label className="chart-size-control">Chart size · {chartZoom}%<input aria-label="Chart size" type="range" min={75} max={135} step={5} value={chartZoom} onChange={e => setChartZoom(Number(e.target.value))} /></label>
+      <span>Timeline position and chart size are separate controls.</span>
+    </div>}
     <div ref={sheetViewport} className="timeline-sheet-viewport">
-    <div className="timeline-report-sheet" style={mode === 'FULL' ? {zoom: fitSheet ? sheetScale : 1} : undefined}>
+    <div className="timeline-report-sheet" style={mode === 'FULL' ? {zoom: effectiveSheetZoom} : undefined}>
     {mode === 'FULL' && <ReportIdentity report={report}/>}
     <div className="timeline-chart-card">
       <h3>{mode !== 'MONTHLY' ? 'Yearly Timeline — Personal Cycles' : 'Yearly / Monthly Timeline Summary'}</h3>
@@ -164,7 +179,6 @@ export function StudentTimeline({ person, mode, year, month, onYearChange, onMon
     </div>
     {mode === 'FULL' && <div className="timeline-chart-card">
       <h3>Yearly / Monthly Timeline Summary</h3>
-      <label className="sheet-time-slider">Center year: {formatHistoricalYear(focusYear)} · Age {focusAge}<input aria-label="Monthly chart age slider" type="range" min={0} max={maxAge} value={focusAge} onChange={e => changeYear(addHistoricalYears(birthYear,Number(e.target.value)))}/></label>
       <div className="student-chart-paper"><div className="print-panel-scroll" tabIndex={0} role="region" aria-label="Three year monthly timeline; scroll horizontally to explore">
         <TimelineAnnotations.Provider value={showPatterns ? monthAnnotations : {CM:monthAnnotations.CM}}><PrintMonthSection report={report} currentYear={reportCurrentYear} focusYear={focusYear} focusAgeOverride={focusAge} setsOverride={monthSets} yearLabelsOverride={monthlyYears.map(formatHistoricalYear)}/></TimelineAnnotations.Provider>
       </div></div>
@@ -174,7 +188,6 @@ export function StudentTimeline({ person, mode, year, month, onYearChange, onMon
       <div className="student-chart-paper"><div className="print-panel-scroll" tabIndex={0} role="region" aria-label="Extended sequence timeline; scroll horizontally to explore">
         <TimelineAnnotations.Provider value={showPatterns ? annualAnnotations(extendedStart,80) : {}}><PrintYearSection report={report} start={extendedStart} length={80} variant="lifetime" markerAge={focusAge} yearSetOverride={buildYearSet(extendedStart,80)}/></TimelineAnnotations.Provider>
       </div></div>
-      <label className="sheet-time-slider extended-time-slider">Explore ages · {focusAge}<input aria-label="Extended chart age slider" type="range" min={0} max={maxAge} value={focusAge} onChange={e => changeYear(addHistoricalYears(birthYear,Number(e.target.value)))}/></label>
     </section>}
     </div></div>
     <details className="timeline-warning-panel" aria-label="Forensic pattern warnings">
