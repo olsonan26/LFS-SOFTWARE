@@ -5,6 +5,7 @@ import App from './App.tsx';
 import './index.css';
 import './components/PersonDossierPrint.css';
 import './components/PersonDossierPrintFill.css';
+import './components/StudentTimelineControls.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
