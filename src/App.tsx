@@ -19,10 +19,7 @@ import { ResearchView } from "./components/ResearchView.tsx";
 import { ReportsView } from "./components/ReportsView.tsx";
 import { MethodologyView } from "./components/MethodologyView.tsx";
 import { BlindAnalysisView } from "./components/BlindAnalysisView.tsx";
-import {
-  NewCaseModal,
-  NewEventModal,
-} from "./components/Modals.tsx";
+import { NewCaseModal, NewEventModal } from "./components/Modals.tsx";
 import { HistoricalNewPersonModal } from "./components/HistoricalNewPersonModal.tsx";
 import { InteractiveTutorial } from "./components/InteractiveTutorial.tsx";
 
@@ -34,6 +31,11 @@ import {
   SEED_HYPOTHESES,
   SEED_USERS,
 } from "./data/seedData.ts";
+import {
+  LFS_STORAGE_KEYS,
+  loadStoredValue,
+  saveStoredValue,
+} from "./data/localPersistence.ts";
 import {
   CaseRecord,
   PersonRecord,
@@ -47,28 +49,54 @@ export default function App() {
   // Global Navigation & User Role
   const [activeTab, setActiveTab] = useState<NavTab>("HOME");
   const [allUsers] = useState<UserProfile[]>(SEED_USERS);
-  const [currentUser, setCurrentUser] = useState<UserProfile>(SEED_USERS[0]);
+  const [currentUser, setCurrentUser] = useState<UserProfile>(() => {
+    const savedUserId = loadStoredValue<string>(LFS_STORAGE_KEYS.currentUserId, "");
+    return SEED_USERS.find((user) => user.userId === savedUserId) || SEED_USERS[0];
+  });
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [activeTab]);
 
-  // Core Entity State
-  const [cases, setCases] = useState<CaseRecord[]>(SEED_CASES);
-  const [activeCase, setActiveCase] = useState<CaseRecord>(SEED_CASES[0]);
-  const [people, setPeople] = useState<PersonRecord[]>(SEED_PEOPLE);
-  const [events, setEvents] = useState<EventRecord[]>(SEED_EVENTS);
-  const [evidenceList, setEvidenceList] =
-    useState<EvidenceRecord[]>(SEED_EVIDENCE);
-  const [hypotheses, setHypotheses] =
-    useState<HypothesisRecord[]>(SEED_HYPOTHESES);
+  // Core Entity State. User-entered records are restored from durable browser storage.
+  const [cases, setCases] = useState<CaseRecord[]>(() =>
+    loadStoredValue<CaseRecord[]>(LFS_STORAGE_KEYS.cases, SEED_CASES),
+  );
+  const [people, setPeople] = useState<PersonRecord[]>(() =>
+    loadStoredValue<PersonRecord[]>(LFS_STORAGE_KEYS.people, SEED_PEOPLE),
+  );
+  const [events, setEvents] = useState<EventRecord[]>(() =>
+    loadStoredValue<EventRecord[]>(LFS_STORAGE_KEYS.events, SEED_EVENTS),
+  );
+  const [evidenceList, setEvidenceList] = useState<EvidenceRecord[]>(() =>
+    loadStoredValue<EvidenceRecord[]>(LFS_STORAGE_KEYS.evidence, SEED_EVIDENCE),
+  );
+  const [hypotheses, setHypotheses] = useState<HypothesisRecord[]>(() =>
+    loadStoredValue<HypothesisRecord[]>(LFS_STORAGE_KEYS.hypotheses, SEED_HYPOTHESES),
+  );
+  const [activeCase, setActiveCase] = useState<CaseRecord>(() => {
+    const savedCaseId = loadStoredValue<string>(LFS_STORAGE_KEYS.activeCaseId, "");
+    return cases.find((item) => item.caseId === savedCaseId) || cases[0] || SEED_CASES[0];
+  });
+
+  // Persist every mutable case-data collection as soon as it changes.
+  useEffect(() => saveStoredValue(LFS_STORAGE_KEYS.cases, cases), [cases]);
+  useEffect(() => saveStoredValue(LFS_STORAGE_KEYS.people, people), [people]);
+  useEffect(() => saveStoredValue(LFS_STORAGE_KEYS.events, events), [events]);
+  useEffect(() => saveStoredValue(LFS_STORAGE_KEYS.evidence, evidenceList), [evidenceList]);
+  useEffect(() => saveStoredValue(LFS_STORAGE_KEYS.hypotheses, hypotheses), [hypotheses]);
+  useEffect(() => {
+    saveStoredValue(LFS_STORAGE_KEYS.activeCaseId, activeCase.caseId);
+  }, [activeCase.caseId]);
+  useEffect(() => {
+    saveStoredValue(LFS_STORAGE_KEYS.currentUserId, currentUser.userId);
+  }, [currentUser.userId]);
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Cross-Navigation Contexts
-  const [chartSelectedPersonId, setChartSelectedPersonId] =
-    useState<string>("");
+  const [chartSelectedPersonId, setChartSelectedPersonId] = useState<string>("");
   const [focusSelectedEventId, setFocusSelectedEventId] = useState<string>("");
 
   // Font Scale Accessibility State for Older Users
@@ -130,6 +158,7 @@ export default function App() {
 
   // Tutorial State
   const [isTutorialOpen, setIsTutorialOpen] = useState<boolean>(false);
+
   // Filtered entities for active case
   const activeCasePeople = useMemo(() => {
     return people.filter((p) => activeCase?.peopleIds?.includes(p.personId));
@@ -170,7 +199,8 @@ export default function App() {
     setPeople((prev) => [newPerson, ...prev]);
     const updated = {
       ...activeCase,
-      peopleIds: [...activeCase.peopleIds, newPerson.personId],
+      peopleIds: Array.from(new Set([...activeCase.peopleIds, newPerson.personId])),
+      lastUpdated: new Date().toISOString(),
     };
     setActiveCase(updated);
     setCases((prev) =>
@@ -180,11 +210,15 @@ export default function App() {
 
   const handleCreateEvent = (newEvent: EventRecord) => {
     setEvents((prev) => [newEvent, ...prev]);
+    const updated = { ...activeCase, lastUpdated: new Date().toISOString() };
+    setActiveCase(updated);
+    setCases((prev) =>
+      prev.map((c) => (c.caseId === updated.caseId ? updated : c)),
+    );
   };
 
   return (
     <div className="app-shell">
-      {/* Top Global Header & Navigation */}
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -336,11 +370,7 @@ export default function App() {
           )}
 
           {activeTab === "RESEARCH" && (
-            <ResearchView
-              allCases={cases}
-              allPeople={people}
-              allEvents={events}
-            />
+            <ResearchView allCases={cases} allPeople={people} allEvents={events} />
           )}
 
           {activeTab === "REPORTS" && (
@@ -356,15 +386,11 @@ export default function App() {
           {activeTab === "METHODOLOGY" && <MethodologyView />}
 
           {activeTab === "BLIND" && (
-            <BlindAnalysisView
-              caseRecord={activeCase}
-              events={activeCaseEvents}
-            />
+            <BlindAnalysisView caseRecord={activeCase} events={activeCaseEvents} />
           )}
         </div>
       </main>
 
-      {/* Creation Modals */}
       <NewCaseModal
         key={String(isNewCaseOpen)}
         isOpen={isNewCaseOpen}
@@ -387,7 +413,6 @@ export default function App() {
         people={activeCasePeople}
       />
 
-      {/* Interactive Guided Tutorial */}
       <InteractiveTutorial
         isOpen={isTutorialOpen}
         onClose={() => setIsTutorialOpen(false)}
