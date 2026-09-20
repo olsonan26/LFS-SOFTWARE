@@ -20,17 +20,11 @@ function escapeHtml(value: unknown) {
     .replaceAll("'", "&#039;");
 }
 
-function printProfileReport(
+function buildPrintHtml(
   personName: string,
   report: DossierProfileReport,
   generated: string,
 ) {
-  const printWindow = window.open("", "_blank", "width=980,height=900");
-  if (!printWindow) {
-    window.alert("Your browser blocked the print window. Please allow pop-ups for LFS and try again.");
-    return;
-  }
-
   const sections = report.sections
     .map(
       (section) => `
@@ -51,8 +45,7 @@ function printProfileReport(
     ? `<div><dt>Prepared by</dt><dd>${escapeHtml(report.generatedBy)}</dd></div>`
     : "";
 
-  printWindow.document.open();
-  printWindow.document.write(`<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -64,12 +57,9 @@ function printProfileReport(
       margin: 0.52in 0.58in 0.55in;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
-    html,
-    body {
+    html, body {
       margin: 0;
       padding: 0;
       background: #ffffff;
@@ -99,7 +89,6 @@ function printProfileReport(
       padding-bottom: 9px;
       border-bottom: 2px solid #a67b2f;
       color: #17345e;
-      font-family: Georgia, "Times New Roman", serif;
       letter-spacing: 0.07em;
       text-transform: uppercase;
     }
@@ -162,10 +151,7 @@ function printProfileReport(
       gap: 6px;
     }
 
-    dt,
-    dd {
-      margin: 0;
-    }
+    dt, dd { margin: 0; }
 
     dt {
       color: #52637d;
@@ -187,7 +173,6 @@ function printProfileReport(
       padding: 14px 16px;
       border-left: 3px solid #a67b2f;
       background: #faf7ef;
-      break-inside: avoid-page;
     }
 
     h2 {
@@ -206,13 +191,9 @@ function printProfileReport(
 
     .executive p:last-child,
     .report-section p:last-child,
-    .interpretive-note p:last-child {
-      margin-bottom: 0;
-    }
+    .interpretive-note p:last-child { margin-bottom: 0; }
 
-    .report-section {
-      margin-top: 18px;
-    }
+    .report-section { margin-top: 18px; }
 
     .report-section h2 {
       padding-bottom: 4px;
@@ -232,9 +213,7 @@ function printProfileReport(
       padding-left: 19px;
     }
 
-    .analyst-summary li {
-      margin-bottom: 5px;
-    }
+    .analyst-summary li { margin-bottom: 5px; }
 
     .interpretive-note {
       margin-top: 18px;
@@ -246,9 +225,7 @@ function printProfileReport(
       break-inside: avoid-page;
     }
 
-    .interpretive-note h2 {
-      font-size: 10.5pt;
-    }
+    .interpretive-note h2 { font-size: 10.5pt; }
 
     .footer {
       display: flex;
@@ -262,27 +239,21 @@ function printProfileReport(
       letter-spacing: 0.06em;
     }
 
-    @media screen {
-      body {
-        padding: 30px;
-        background: #e8e6df;
-      }
-
-      .report {
-        padding: 0.52in 0.58in 0.55in;
-        background: #fffdf8;
-        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
-      }
-    }
-
     @media print {
-      body {
-        background: #fff !important;
+      html, body {
+        width: auto !important;
+        height: auto !important;
+        overflow: visible !important;
       }
 
+      body { background: #fff !important; }
+
       .report {
-        max-width: none;
-        margin: 0;
+        display: block !important;
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        visibility: visible !important;
       }
     }
   </style>
@@ -331,21 +302,84 @@ function printProfileReport(
     </footer>
   </main>
 </body>
-</html>`);
-  printWindow.document.close();
+</html>`;
+}
 
-  const triggerPrint = () => {
-    printWindow.focus();
-    printWindow.print();
+function printProfileReport(
+  personName: string,
+  report: DossierProfileReport,
+  generated: string,
+) {
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("title", "Lettrology profile report print document");
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.style.position = "fixed";
+  iframe.style.left = "-10000px";
+  iframe.style.top = "0";
+  iframe.style.width = "8.5in";
+  iframe.style.height = "11in";
+  iframe.style.border = "0";
+  iframe.style.opacity = "0";
+  iframe.style.pointerEvents = "none";
+
+  document.body.appendChild(iframe);
+
+  const printDocument = iframe.contentDocument;
+  const printWindow = iframe.contentWindow;
+
+  if (!printDocument || !printWindow) {
+    iframe.remove();
+    window.alert("The print document could not be created. Please try again.");
+    return;
+  }
+
+  let hasPrinted = false;
+  let cleanupTimer: number | undefined;
+
+  const cleanup = () => {
+    if (cleanupTimer) window.clearTimeout(cleanupTimer);
+    if (iframe.isConnected) iframe.remove();
   };
 
-  if (printWindow.document.readyState === "complete") {
-    window.setTimeout(triggerPrint, 150);
-  } else {
-    printWindow.addEventListener("load", () => window.setTimeout(triggerPrint, 150), {
-      once: true,
+  const triggerPrint = async () => {
+    if (hasPrinted) return;
+    hasPrinted = true;
+
+    try {
+      if (printDocument.fonts?.ready) {
+        await printDocument.fonts.ready;
+      }
+    } catch {
+      // Font readiness should never block printing.
+    }
+
+    await new Promise<void>((resolve) => {
+      printWindow.requestAnimationFrame(() => {
+        printWindow.requestAnimationFrame(() => resolve());
+      });
     });
-  }
+
+    printWindow.focus();
+    printWindow.print();
+
+    cleanupTimer = window.setTimeout(cleanup, 60_000);
+  };
+
+  printWindow.addEventListener("afterprint", cleanup, { once: true });
+  iframe.addEventListener(
+    "load",
+    () => {
+      window.setTimeout(() => void triggerPrint(), 450);
+    },
+    { once: true },
+  );
+
+  printDocument.open();
+  printDocument.write(buildPrintHtml(personName, report, generated));
+  printDocument.close();
+
+  // Some Chromium builds do not reliably fire iframe load for document.write().
+  window.setTimeout(() => void triggerPrint(), 900);
 }
 
 export function PersonProfileReportModal({
