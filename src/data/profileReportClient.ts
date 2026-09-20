@@ -2,10 +2,6 @@ import type {
   DossierPerspectiveId,
   DossierReportSection,
 } from "../types";
-import {
-  ensureCloudSession,
-  getStoredCloudSession,
-} from "./cloudWorkspace";
 
 const DEFAULT_SUPABASE_URL = "https://frejicmqhsenqmdmqmfe.supabase.co";
 const DEFAULT_SUPABASE_PUBLISHABLE_KEY =
@@ -47,22 +43,14 @@ export interface ProfileReportGenerationResult {
 export async function generateProfileReport(
   input: ProfileReportGenerationInput,
 ): Promise<ProfileReportGenerationResult> {
-  const stored = getStoredCloudSession();
-  const session = await ensureCloudSession(stored);
-  if (!session) {
-    throw new Error(
-      "Sign in to the Shared Cloud workspace before generating an AI profile report.",
-    );
-  }
-
   const response = await fetch(
     `${SUPABASE_URL}/functions/v1/generate-profile-report`,
     {
       method: "POST",
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
-        Authorization: `Bearer ${session.accessToken}`,
         "Content-Type": "application/json",
+        "X-LFS-Report-Client": "lfs-dossier-v1",
       },
       body: JSON.stringify(input),
     },
@@ -70,6 +58,11 @@ export async function generateProfileReport(
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error(
+        "The report service has reached its temporary generation limit. Please try again shortly.",
+      );
+    }
     throw new Error(
       data?.error ||
         data?.message ||

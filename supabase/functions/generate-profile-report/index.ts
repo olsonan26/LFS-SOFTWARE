@@ -7,12 +7,32 @@ import {
 } from "./profileReportSkill.ts";
 
 const MODEL = "deepseek/deepseek-v4.1-flash";
+const REPORT_CLIENT = "lfs-dossier-v1";
+const HOUR_LIMIT = 8;
+const DAY_LIMIT = 30;
+const ALLOWED_ORIGINS = new Set([
+  "https://lfssoftware.vercel.app",
+  "http://localhost:3000",
+  "http://localhost:5173",
+]);
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+function isAllowedOrigin(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  return ALLOWED_ORIGINS.has(origin);
+}
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  return {
+    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.has(origin)
+      ? origin
+      : "https://lfssoftware.vercel.app",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-lfs-report-client",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    Vary: "Origin",
+  };
+}
 
 const reportSchema = {
   type: "object",
@@ -56,12 +76,13 @@ const reportSchema = {
   ],
 };
 
-function json(body: unknown, status = 200) {
+function json(req: Request, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
+      ...corsHeaders(req),
       "Content-Type": "application/json",
+      "Cache-Control": "no-store",
     },
   });
 }
@@ -97,46 +118,107 @@ function validPerspective(item: any) {
   );
 }
 
-async function requireApprovedCollaborator(req: Request) {
-  const authorization = req.headers.get("Authorization") || "";
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  if (!authorization || !supabaseUrl || !anonKey) return false;
+async function fingerprintFor(req: Request, salt: string) {
+  const forwarded = req.headers.get("x-forwarded-for") || "";
+  const ip =
+    req.headers.get("cf-connecting-ip") ||
+    forwarded.split(",")[0]?.trim() ||
+    "unknown";
+  const userAgent = req.headers.get("user-agent") || "unknown";
+  const raw = new TextEncoder().encode(`${salt}|${ip}|${userAgent}`);
+  const digest = await crypto.subtle.digest("SHA-256", raw);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
 
-  const response = await fetch(
-    `${supabaseUrl}/rest/v1/lfs_collaborators?select=email&limit=1`,
+async function enforceRateLimit(req: Request) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("The report service rate limiter is not configured.");
+  }
+
+  const fingerprint = await fingerprintFor(req, serviceRoleKey);
+  const sinceDay = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const sinceHour = Date.now() - 60 * 60 * 1000;
+  const query = new URL(`${supabaseUrl}/rest/v1/lfs_profile_report_rate_limits`);
+  query.searchParams.set("select", "created_at");
+  query.searchParams.set("fingerprint", `eq.${fingerprint}`);
+  query.searchParams.set("created_at", `gte.${sinceDay}`);
+  query.searchParams.set("order", "created_at.desc");
+  query.searchParams.set("limit", String(DAY_LIMIT + 1));
+
+  const headers = {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    "Content-Type": "application/json",
+  };
+
+  const lookup = await fetch(query.toString(), { headers });
+  if (!lookup.ok) {
+    throw new Error("Unable to verify the report generation limit.");
+  }
+
+  const recent = await lookup.json().catch(() => []);
+  const rows = Array.isArray(recent) ? recent : [];
+  const hourly = rows.filter((row: any) => {
+    const timestamp = Date.parse(row?.created_at || "");
+    return Number.isFinite(timestamp) && timestamp >= sinceHour;
+  }).length;
+
+  if (hourly >= HOUR_LIMIT || rows.length >= DAY_LIMIT) {
+    return false;
+  }
+
+  const inserted = await fetch(
+    `${supabaseUrl}/rest/v1/lfs_profile_report_rate_limits`,
     {
+      method: "POST",
       headers: {
-        apikey: anonKey,
-        Authorization: authorization,
-        Accept: "application/json",
+        ...headers,
+        Prefer: "return=minimal",
       },
+      body: JSON.stringify({ fingerprint }),
     },
   );
-  if (!response.ok) return false;
-  const rows = await response.json().catch(() => []);
-  return Array.isArray(rows) && rows.length > 0;
+
+  if (!inserted.ok) {
+    throw new Error("Unable to reserve a report generation slot.");
+  }
+
+  return true;
 }
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed." }, 405);
+    return json(req, { error: "Method not allowed." }, 405);
   }
 
   try {
-    if (!(await requireApprovedCollaborator(req))) {
+    if (!isAllowedOrigin(req)) {
+      return json(req, { error: "Report generation is only available inside LFS." }, 403);
+    }
+
+    if (req.headers.get("x-lfs-report-client") !== REPORT_CLIENT) {
+      return json(req, { error: "Invalid report client." }, 403);
+    }
+
+    if (!(await enforceRateLimit(req))) {
       return json(
-        { error: "You must be signed in as an approved LFS collaborator." },
-        403,
+        req,
+        { error: "The temporary report generation limit has been reached." },
+        429,
       );
     }
 
     const apiKey = Deno.env.get("OPENROUTER_API_KEY");
     if (!apiKey) {
       return json(
+        req,
         {
           error:
             "The profile report service is not configured yet. Add OPENROUTER_API_KEY to the Supabase Edge Function secrets.",
@@ -158,7 +240,7 @@ Deno.serve(async (req: Request) => {
       perspectives.length !== 6 ||
       !perspectives.every(validPerspective)
     ) {
-      return json({ error: "The report input is incomplete or invalid." }, 400);
+      return json(req, { error: "The report input is incomplete or invalid." }, 400);
     }
 
     const safePayload = {
@@ -171,8 +253,12 @@ Deno.serve(async (req: Request) => {
         title: item.title.slice(0, 120),
         source: item.source.slice(0, 120),
         calculation: item.calculation.slice(0, 80),
-        elevated: item.elevated.slice(0, 12).map((trait: string) => trait.slice(0, 220)),
-        shadow: item.shadow.slice(0, 12).map((trait: string) => trait.slice(0, 220)),
+        elevated: item.elevated
+          .slice(0, 12)
+          .map((trait: string) => trait.slice(0, 220)),
+        shadow: item.shadow
+          .slice(0, 12)
+          .map((trait: string) => trait.slice(0, 220)),
       })),
     };
 
@@ -228,7 +314,7 @@ Deno.serve(async (req: Request) => {
       throw new Error("OpenRouter returned an incomplete profile report.");
     }
 
-    return json({
+    return json(req, {
       ...report,
       model: MODEL,
       skillVersion: PROFILE_REPORT_SKILL_VERSION,
@@ -236,6 +322,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error("generate-profile-report failed", error);
     return json(
+      req,
       {
         error:
           error instanceof Error
