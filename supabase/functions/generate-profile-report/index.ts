@@ -118,6 +118,43 @@ function validPerspective(item: any) {
   );
 }
 
+function getAdminKey() {
+  const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacy) {
+    return {
+      key: legacy,
+      useBearer: !legacy.startsWith("sb_secret_"),
+    };
+  }
+
+  const rawSecretKeys = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (!rawSecretKeys) return null;
+
+  try {
+    const parsed = JSON.parse(rawSecretKeys);
+    const secret =
+      parsed?.default ||
+      Object.values(parsed || {}).find((value) => typeof value === "string");
+    if (typeof secret !== "string" || !secret) return null;
+    return { key: secret, useBearer: false };
+  } catch {
+    return null;
+  }
+}
+
+function adminHeaders(admin: { key: string; useBearer: boolean }) {
+  const headers: Record<string, string> = {
+    apikey: admin.key,
+    "Content-Type": "application/json",
+  };
+
+  if (admin.useBearer) {
+    headers.Authorization = `Bearer ${admin.key}`;
+  }
+
+  return headers;
+}
+
 async function fingerprintFor(req: Request, salt: string) {
   const forwarded = req.headers.get("x-forwarded-for") || "";
   const ip =
@@ -134,12 +171,13 @@ async function fingerprintFor(req: Request, salt: string) {
 
 async function enforceRateLimit(req: Request) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !serviceRoleKey) {
+  const admin = getAdminKey();
+  if (!supabaseUrl || !admin) {
     throw new Error("The report service rate limiter is not configured.");
   }
 
-  const fingerprint = await fingerprintFor(req, serviceRoleKey);
+  const headers = adminHeaders(admin);
+  const fingerprint = await fingerprintFor(req, admin.key);
   const sinceDay = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const sinceHour = Date.now() - 60 * 60 * 1000;
   const query = new URL(`${supabaseUrl}/rest/v1/lfs_profile_report_rate_limits`);
@@ -149,14 +187,10 @@ async function enforceRateLimit(req: Request) {
   query.searchParams.set("order", "created_at.desc");
   query.searchParams.set("limit", String(DAY_LIMIT + 1));
 
-  const headers = {
-    apikey: serviceRoleKey,
-    Authorization: `Bearer ${serviceRoleKey}`,
-    "Content-Type": "application/json",
-  };
-
   const lookup = await fetch(query.toString(), { headers });
   if (!lookup.ok) {
+    const detail = await lookup.text().catch(() => "");
+    console.error("Profile report rate-limit lookup failed", lookup.status, detail);
     throw new Error("Unable to verify the report generation limit.");
   }
 
@@ -184,6 +218,8 @@ async function enforceRateLimit(req: Request) {
   );
 
   if (!inserted.ok) {
+    const detail = await inserted.text().catch(() => "");
+    console.error("Profile report rate-limit insert failed", inserted.status, detail);
     throw new Error("Unable to reserve a report generation slot.");
   }
 
@@ -205,14 +241,6 @@ Deno.serve(async (req: Request) => {
 
     if (req.headers.get("x-lfs-report-client") !== REPORT_CLIENT) {
       return json(req, { error: "Invalid report client." }, 403);
-    }
-
-    if (!(await enforceRateLimit(req))) {
-      return json(
-        req,
-        { error: "The temporary report generation limit has been reached." },
-        429,
-      );
     }
 
     const apiKey = Deno.env.get("OPENROUTER_API_KEY");
@@ -241,6 +269,14 @@ Deno.serve(async (req: Request) => {
       !perspectives.every(validPerspective)
     ) {
       return json(req, { error: "The report input is incomplete or invalid." }, 400);
+    }
+
+    if (!(await enforceRateLimit(req))) {
+      return json(
+        req,
+        { error: "The temporary report generation limit has been reached." },
+        429,
+      );
     }
 
     const safePayload = {
