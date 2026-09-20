@@ -8,8 +8,9 @@ import {
 
 const MODEL = "deepseek/deepseek-v4.1-flash";
 const REPORT_CLIENT = "lfs-dossier-v1";
-const HOUR_LIMIT = 8;
-const DAY_LIMIT = 30;
+const DEFAULT_SUPABASE_URL = "https://frejicmqhsenqmdmqmfe.supabase.co";
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_evdIHrK_2Kw-1DpJjYgkYg_9sBv5W09";
 const ALLOWED_ORIGINS = new Set([
   "https://lfssoftware.vercel.app",
   "http://localhost:3000",
@@ -118,43 +119,6 @@ function validPerspective(item: any) {
   );
 }
 
-function getAdminKey() {
-  const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (legacy) {
-    return {
-      key: legacy,
-      useBearer: !legacy.startsWith("sb_secret_"),
-    };
-  }
-
-  const rawSecretKeys = Deno.env.get("SUPABASE_SECRET_KEYS");
-  if (!rawSecretKeys) return null;
-
-  try {
-    const parsed = JSON.parse(rawSecretKeys);
-    const secret =
-      parsed?.default ||
-      Object.values(parsed || {}).find((value) => typeof value === "string");
-    if (typeof secret !== "string" || !secret) return null;
-    return { key: secret, useBearer: false };
-  } catch {
-    return null;
-  }
-}
-
-function adminHeaders(admin: { key: string; useBearer: boolean }) {
-  const headers: Record<string, string> = {
-    apikey: admin.key,
-    "Content-Type": "application/json",
-  };
-
-  if (admin.useBearer) {
-    headers.Authorization = `Bearer ${admin.key}`;
-  }
-
-  return headers;
-}
-
 async function fingerprintFor(req: Request, salt: string) {
   const forwarded = req.headers.get("x-forwarded-for") || "";
   const ip =
@@ -169,61 +133,32 @@ async function fingerprintFor(req: Request, salt: string) {
     .join("");
 }
 
-async function enforceRateLimit(req: Request) {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const admin = getAdminKey();
-  if (!supabaseUrl || !admin) {
-    throw new Error("The report service rate limiter is not configured.");
-  }
+async function enforceRateLimit(req: Request, salt: string) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || DEFAULT_SUPABASE_URL;
+  const publishableKey =
+    Deno.env.get("SUPABASE_ANON_KEY") || DEFAULT_SUPABASE_PUBLISHABLE_KEY;
+  const fingerprint = await fingerprintFor(req, salt);
 
-  const headers = adminHeaders(admin);
-  const fingerprint = await fingerprintFor(req, admin.key);
-  const sinceDay = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const sinceHour = Date.now() - 60 * 60 * 1000;
-  const query = new URL(`${supabaseUrl}/rest/v1/lfs_profile_report_rate_limits`);
-  query.searchParams.set("select", "created_at");
-  query.searchParams.set("fingerprint", `eq.${fingerprint}`);
-  query.searchParams.set("created_at", `gte.${sinceDay}`);
-  query.searchParams.set("order", "created_at.desc");
-  query.searchParams.set("limit", String(DAY_LIMIT + 1));
-
-  const lookup = await fetch(query.toString(), { headers });
-  if (!lookup.ok) {
-    const detail = await lookup.text().catch(() => "");
-    console.error("Profile report rate-limit lookup failed", lookup.status, detail);
-    throw new Error("Unable to verify the report generation limit.");
-  }
-
-  const recent = await lookup.json().catch(() => []);
-  const rows = Array.isArray(recent) ? recent : [];
-  const hourly = rows.filter((row: any) => {
-    const timestamp = Date.parse(row?.created_at || "");
-    return Number.isFinite(timestamp) && timestamp >= sinceHour;
-  }).length;
-
-  if (hourly >= HOUR_LIMIT || rows.length >= DAY_LIMIT) {
-    return false;
-  }
-
-  const inserted = await fetch(
-    `${supabaseUrl}/rest/v1/lfs_profile_report_rate_limits`,
+  const response = await fetch(
+    `${supabaseUrl}/rest/v1/rpc/lfs_reserve_profile_report_slot`,
     {
       method: "POST",
       headers: {
-        ...headers,
-        Prefer: "return=minimal",
+        apikey: publishableKey,
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ fingerprint }),
+      body: JSON.stringify({ p_fingerprint: fingerprint }),
     },
   );
 
-  if (!inserted.ok) {
-    const detail = await inserted.text().catch(() => "");
-    console.error("Profile report rate-limit insert failed", inserted.status, detail);
-    throw new Error("Unable to reserve a report generation slot.");
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    console.error("Profile report rate-limit RPC failed", response.status, detail);
+    throw new Error("Unable to verify the report generation limit.");
   }
 
-  return true;
+  const allowed = await response.json().catch(() => false);
+  return allowed === true;
 }
 
 Deno.serve(async (req: Request) => {
@@ -271,7 +206,7 @@ Deno.serve(async (req: Request) => {
       return json(req, { error: "The report input is incomplete or invalid." }, 400);
     }
 
-    if (!(await enforceRateLimit(req))) {
+    if (!(await enforceRateLimit(req, apiKey))) {
       return json(
         req,
         { error: "The temporary report generation limit has been reached." },
