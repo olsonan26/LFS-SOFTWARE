@@ -77,6 +77,15 @@ export type DossierTraitSelections = Partial<
   Record<DossierPerspectiveId, DossierTraitSelection>
 >;
 
+export interface DossierReportAssessment {
+  /** 0 = strongly constructive/elevated framing, 10 = strongly cautionary/shadow framing. */
+  toneScale: number;
+  /** Analyst-authored context that should be professionally rewritten, not treated as evidence. */
+  notes: string;
+  updatedAt: string;
+  updatedBy?: string;
+}
+
 export interface DossierReportSection {
   heading: string;
   paragraphs: string[];
@@ -95,6 +104,7 @@ export interface DossierProfileReport {
   generatedBy?: string;
   sourceSelections: DossierTraitSelections;
   sourceCalculations: Partial<Record<DossierPerspectiveId, string>>;
+  sourceAssessment?: DossierReportAssessment;
 }
 
 export interface PersonRecord {
@@ -117,6 +127,7 @@ export interface PersonRecord {
   birthLocation?: string;
   notes?: string;
   dossierTraitSelections?: DossierTraitSelections;
+  dossierReportAssessment?: DossierReportAssessment;
   dossierProfileReports?: DossierProfileReport[];
   identities: IdentityRecord[];
 }
