@@ -114,6 +114,149 @@
   font-weight: 700;
 }
 
+/* Analyst framing controls shown immediately before report generation. */
+.dossier-report-tools {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px 16px;
+  align-items: end;
+}
+
+.dossier-case-assessment {
+  grid-column: 1 / -1;
+  padding: 13px 14px 12px;
+  border: 1px solid rgba(101, 77, 39, 0.24);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.dossier-assessment-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dossier-assessment-heading strong {
+  color: #17345e;
+  font-family: "Cinzel", serif;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dossier-assessment-badge {
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  border: 1px solid rgba(38, 53, 79, 0.22);
+  border-radius: 999px;
+  background: #fff;
+  color: #17345e;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.dossier-assessment-explainer {
+  margin: 5px 0 9px;
+  color: #465a75;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.dossier-assessment-scale {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.dossier-assessment-scale > span {
+  color: #314965;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.dossier-assessment-scale > span:first-child {
+  color: #1d6a43;
+}
+
+.dossier-assessment-scale > span:last-child {
+  color: #7b1f1f;
+}
+
+.dossier-assessment-range {
+  width: 100%;
+  min-height: 10px !important;
+  height: 10px;
+  padding: 0;
+  border: 1px solid rgba(49, 73, 101, 0.18);
+  border-radius: 999px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background: linear-gradient(
+    90deg,
+    #2f7d4b 0%,
+    #6ea75f 22%,
+    #c3b84b 45%,
+    #d8893d 64%,
+    #b84934 82%,
+    #781f1f 100%
+  );
+  cursor: pointer;
+}
+
+.dossier-assessment-range::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #17345e;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.22);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.dossier-assessment-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 3px solid #17345e;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.22);
+}
+
+.dossier-case-assessment textarea {
+  display: block;
+  width: 100%;
+  min-height: 76px;
+  margin-top: 10px;
+  padding: 9px 10px;
+  resize: vertical;
+  border: 1px solid rgba(49, 73, 101, 0.28);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #20375d;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.dossier-case-assessment textarea::placeholder {
+  color: #78869a;
+}
+
+.dossier-assessment-note {
+  display: block;
+  margin-top: 6px;
+  color: #5c687a;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 9px;
+  line-height: 1.3;
+}
+
 @media (max-width: 640px) {
   .dossier-check-instruction {
     font-size: 12px;
@@ -137,6 +280,38 @@
 
   .dossier-glance-row > strong {
     font-size: 11px;
+  }
+
+  .dossier-report-tools {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dossier-case-assessment,
+  .dossier-report-tools-copy,
+  .dossier-report-actions {
+    grid-column: 1 !important;
+  }
+
+  .dossier-assessment-heading {
+    align-items: flex-start;
+  }
+
+  .dossier-assessment-scale {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .dossier-assessment-scale > span {
+    white-space: normal;
+  }
+
+  .dossier-assessment-heading strong {
+    font-size: 14px;
+  }
+
+  .dossier-assessment-explainer,
+  .dossier-case-assessment textarea {
+    font-size: 13px;
   }
 }
 
@@ -192,5 +367,9 @@
   .dossier-glance-row > strong {
     font-size: 4.8pt !important;
     line-height: 1.08 !important;
+  }
+
+  .dossier-case-assessment {
+    display: none !important;
   }
 }
