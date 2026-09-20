@@ -1,17 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
-  BarChart3,
   CalendarDays,
-  Gem,
   Leaf,
   MapPin,
-  MessageCircle,
   Printer,
   UserRound,
   X,
 } from "lucide-react";
-import type { PersonRecord } from "../types";
+import type {
+  DossierPerspectiveId,
+  DossierTraitSelection,
+  PersonRecord,
+} from "../types";
 import { calculatePrimaryProfile } from "../core/lettrology-engine/identityCalculations";
 import {
   formatCompound,
@@ -31,6 +32,8 @@ interface Props {
   person: PersonRecord;
   open: boolean;
   onClose: () => void;
+  onUpdatePerson: (person: PersonRecord) => void;
+  editorName?: string;
 }
 
 interface PerspectiveDefinition {
@@ -43,6 +46,13 @@ interface PerspectiveDefinition {
 }
 
 type InterpretationStatus = "idle" | "loading" | "ready" | "error";
+type ExpressionMode = "elevated" | "shadow";
+
+const EMPTY_SELECTION: DossierTraitSelection = {
+  elevated: [],
+  shadow: [],
+  updatedAt: "",
+};
 
 function parseDob(dob: string) {
   const normalized = dob.replace(/\s(?:BC|BCE|AD|CE)$/i, "");
@@ -104,12 +114,11 @@ function profileId(person: PersonRecord) {
   return `LT-${suffix || "PROFILE"}`;
 }
 
-function fallbackTraits(value: CompoundValue, mode: "elevated" | "shadow") {
+function fallbackTraits(value: CompoundValue, mode: ExpressionMode) {
   const calculation = formatCompound(value);
   if (mode === "elevated") {
     return {
-      summary:
-        "Approved elevated wording could not be loaded for this position.",
+      summary: "Approved elevated wording could not be loaded for this position.",
       traits: unique([
         `Calculation ${calculation}`,
         `Root value ${value.root}`,
@@ -130,12 +139,20 @@ function fallbackTraits(value: CompoundValue, mode: "elevated" | "shadow") {
   };
 }
 
-function listOrPending(items: string[]) {
-  const values = unique(items, 5);
-  return values.length ? values : ["Interpretation unavailable"];
+function balanceLabel(elevated: number, shadow: number) {
+  if (!elevated && !shadow) return "Not assessed";
+  if (elevated > shadow) return "More elevated traits checked";
+  if (shadow > elevated) return "More shadow traits checked";
+  return "Mixed / balanced traits checked";
 }
 
-export function PersonDossier({ person, open, onClose }: Props) {
+export function PersonDossier({
+  person,
+  open,
+  onClose,
+  onUpdatePerson,
+  editorName,
+}: Props) {
   const dialogRef = useDialogFocus(open, onClose);
   const [interpretationRegistry, setInterpretationRegistry] =
     useState<DossierInterpretationRegistry>({});
@@ -235,74 +252,52 @@ export function PersonDossier({ person, open, onClose }: Props) {
     day: "numeric",
     year: "numeric",
   }).format(new Date());
-  const loadedCount = perspectives.filter((item) => item.interpretation).length;
 
-  const summary = useMemo(() => {
-    const elevated = unique(
-      perspectives.flatMap((item) => item.interpretation?.elevated.traits || []),
-      3,
-    );
-    const shadow = unique(
-      perspectives.flatMap((item) => item.interpretation?.shadow.traits || []),
-      2,
-    );
+  const selectionFor = (id: CorePerspectiveId) =>
+    person.dossierTraitSelections?.[id as DossierPerspectiveId] || EMPTY_SELECTION;
 
-    if (loadedCount === perspectives.length && elevated.length) {
-      const elevatedText = elevated.join(", ");
-      const shadowText = shadow.length
-        ? ` Under pressure, the corresponding shadow expressions include ${shadow.join(", ")}.`
-        : "";
-      return `${person.displayName}’s six core Lettrology perspectives emphasize ${elevatedText}.${shadowText}`;
-    }
+  const toggleTrait = (
+    perspectiveId: CorePerspectiveId,
+    mode: ExpressionMode,
+    trait: string,
+  ) => {
+    const id = perspectiveId as DossierPerspectiveId;
+    const current = person.dossierTraitSelections?.[id] || EMPTY_SELECTION;
+    const currentList = current[mode];
+    const nextList = currentList.includes(trait)
+      ? currentList.filter((item) => item !== trait)
+      : [...currentList, trait];
 
-    if (interpretationStatus === "loading") {
-      return `This dossier assembles ${person.displayName}’s six fixed Lettrology calculations. The approved interpretation library is loading from Supabase.`;
-    }
+    const nextSelection: DossierTraitSelection = {
+      ...current,
+      [mode]: nextList,
+      updatedAt: new Date().toISOString(),
+      updatedBy: editorName,
+    };
 
-    if (interpretationStatus === "error") {
-      return `This dossier assembles ${person.displayName}’s six fixed Lettrology calculations. The interpretation database is temporarily unavailable, so calculation-only fallbacks are being shown.`;
-    }
+    onUpdatePerson({
+      ...person,
+      dossierTraitSelections: {
+        ...(person.dossierTraitSelections || {}),
+        [id]: nextSelection,
+      },
+    });
+  };
 
-    return `This dossier assembles ${person.displayName}’s six fixed Lettrology calculations from the recorded birth name and birth date.`;
-  }, [interpretationStatus, loadedCount, person.displayName, perspectives]);
-
-  const coreStrengths = listOrPending(
-    perspectives.flatMap((item) => item.interpretation?.elevated.traits || []),
+  const totalElevated = perspectives.reduce(
+    (sum, item) => sum + selectionFor(item.id).elevated.length,
+    0,
   );
-  const shadowTendencies = listOrPending(
-    perspectives.flatMap((item) => item.interpretation?.shadow.traits || []),
-  );
-
-  const explicitCommunication = perspectives.flatMap(
-    (item) => item.interpretation?.communication || [],
-  );
-  const communicationStyle = listOrPending(
-    explicitCommunication.length
-      ? explicitCommunication
-      : perspectives
-          .filter(
-            (item) =>
-              item.id === "initialImpressions" || item.id === "personality",
-          )
-          .flatMap((item) => item.interpretation?.elevated.traits || []),
-  );
-
-  const explicitMotivations = perspectives.flatMap(
-    (item) => item.interpretation?.motivations || [],
-  );
-  const primaryMotivations = listOrPending(
-    explicitMotivations.length
-      ? explicitMotivations
-      : perspectives
-          .filter(
-            (item) => item.id === "heartDesire" || item.id === "ultimateGoal",
-          )
-          .flatMap((item) => item.interpretation?.elevated.traits || []),
+  const totalShadow = perspectives.reduce(
+    (sum, item) => sum + selectionFor(item.id).shadow.length,
+    0,
   );
 
   const descriptor =
     perspectives.find((item) => item.interpretation?.descriptor)?.interpretation
       ?.descriptor || "Six fixed patterns. One verified profile.";
+
+  const summary = `Below is a good overview of who ${person.displayName} is through the six core Lettrology perspectives. Read below for the full breakdown.`;
 
   if (!open) return null;
 
@@ -324,18 +319,10 @@ export function PersonDossier({ person, open, onClose }: Props) {
         <div className="dossier-folder dossier-folder-mid" aria-hidden="true" />
 
         <aside className="dossier-tabs" aria-label="Dossier sections">
-          <button type="button" className="active" aria-current="page">
-            Overview
-          </button>
-          <button type="button" disabled>
-            Patterns
-          </button>
-          <button type="button" disabled>
-            Insights
-          </button>
-          <button type="button" disabled>
-            Notes
-          </button>
+          <button type="button" className="active" aria-current="page">Overview</button>
+          <button type="button" disabled>Patterns</button>
+          <button type="button" disabled>Insights</button>
+          <button type="button" disabled>Notes</button>
         </aside>
 
         <article className="person-dossier-paper">
@@ -384,23 +371,12 @@ export function PersonDossier({ person, open, onClose }: Props) {
               <div className="dossier-title-row">
                 <div>
                   <h1 id="person-dossier-title">Person Dossier</h1>
-                  <p className="dossier-kicker">
-                    A deeper understanding. A more complete person.
-                  </p>
+                  <p className="dossier-kicker">A deeper understanding. A more complete person.</p>
                 </div>
                 <dl className="dossier-metadata">
-                  <div>
-                    <dt>Profile ID</dt>
-                    <dd>{profileId(person)}</dd>
-                  </div>
-                  <div>
-                    <dt>Generated</dt>
-                    <dd>{generated}</dd>
-                  </div>
-                  <div>
-                    <dt>Classification</dt>
-                    <dd>Personal Insight Report</dd>
-                  </div>
+                  <div><dt>Profile ID</dt><dd>{profileId(person)}</dd></div>
+                  <div><dt>Generated</dt><dd>{generated}</dd></div>
+                  <div><dt>Classification</dt><dd>Personal Insight Report</dd></div>
                 </dl>
               </div>
 
@@ -408,17 +384,9 @@ export function PersonDossier({ person, open, onClose }: Props) {
                 <div>
                   <h2>{person.displayName}</h2>
                   <div className="dossier-person-facts">
-                    <span>
-                      <CalendarDays size={17} />
-                      {formatBirthDate(person.dob)}
-                    </span>
+                    <span><CalendarDays size={17} />{formatBirthDate(person.dob)}</span>
                     {typeof age === "number" && <span>Age {age}</span>}
-                    {person.birthLocation && (
-                      <span>
-                        <MapPin size={17} />
-                        {person.birthLocation}
-                      </span>
-                    )}
+                    {person.birthLocation && <span><MapPin size={17} />{person.birthLocation}</span>}
                   </div>
                 </div>
                 <div className="dossier-confidential" aria-label="Lettrology confidential">
@@ -431,10 +399,8 @@ export function PersonDossier({ person, open, onClose }: Props) {
                 <p>{summary}</p>
                 <blockquote>
                   Unique patterns.
-                  <br />
-                  Real potential.
-                  <br />
-                  A brighter tomorrow.
+                  <br />Real potential.
+                  <br />A brighter tomorrow.
                 </blockquote>
               </div>
             </div>
@@ -442,18 +408,20 @@ export function PersonDossier({ person, open, onClose }: Props) {
 
           <section className="dossier-core-section">
             <div className="dossier-section-heading">
-              <h2>The Six Core Perspectives</h2>
+              <div>
+                <h2>The Six Core Perspectives</h2>
+                <small className="dossier-check-instruction">
+                  Check the traits that actually fit this person. Every choice is saved to their profile.
+                </small>
+              </div>
               <p>One name. Many insights. A more complete you.</p>
             </div>
 
             <div className="dossier-core-grid">
               {perspectives.map((perspective) => {
-                const elevated =
-                  perspective.interpretation?.elevated ||
-                  fallbackTraits(perspective.value, "elevated");
-                const shadow =
-                  perspective.interpretation?.shadow ||
-                  fallbackTraits(perspective.value, "shadow");
+                const elevated = perspective.interpretation?.elevated || fallbackTraits(perspective.value, "elevated");
+                const shadow = perspective.interpretation?.shadow || fallbackTraits(perspective.value, "shadow");
+                const selected = selectionFor(perspective.id);
 
                 return (
                   <article className="dossier-core-card" key={perspective.id}>
@@ -463,32 +431,46 @@ export function PersonDossier({ person, open, onClose }: Props) {
                         <strong>{perspective.title}</strong>
                         <small>{perspective.source}</small>
                       </span>
-                      <span className="dossier-calculation">
-                        {formatCompound(perspective.value)}
-                      </span>
+                      <span className="dossier-calculation">{formatCompound(perspective.value)}</span>
                     </header>
 
                     <div className="dossier-expression-grid">
                       <section className="dossier-expression elevated">
-                        <h3>
-                          <Leaf size={15} /> Elevated Expression
-                        </h3>
+                        <h3><Leaf size={15} /> Elevated Expression</h3>
                         <p>{elevated.summary}</p>
-                        <ul>
+                        <ul className="dossier-trait-list">
                           {elevated.traits.slice(0, 5).map((trait) => (
-                            <li key={trait}>{trait}</li>
+                            <li key={trait}>
+                              <label className="dossier-trait-check">
+                                <input
+                                  type="checkbox"
+                                  checked={selected.elevated.includes(trait)}
+                                  onChange={() => toggleTrait(perspective.id, "elevated", trait)}
+                                  aria-label={`Mark ${trait} as fitting ${person.displayName}`}
+                                />
+                                <span>{trait}</span>
+                              </label>
+                            </li>
                           ))}
                         </ul>
                       </section>
 
                       <section className="dossier-expression shadow">
-                        <h3>
-                          <AlertTriangle size={15} /> Shadow Expression
-                        </h3>
+                        <h3><AlertTriangle size={15} /> Shadow Expression</h3>
                         <p>{shadow.summary}</p>
-                        <ul>
+                        <ul className="dossier-trait-list">
                           {shadow.traits.slice(0, 5).map((trait) => (
-                            <li key={trait}>{trait}</li>
+                            <li key={trait}>
+                              <label className="dossier-trait-check">
+                                <input
+                                  type="checkbox"
+                                  checked={selected.shadow.includes(trait)}
+                                  onChange={() => toggleTrait(perspective.id, "shadow", trait)}
+                                  aria-label={`Mark ${trait} as fitting ${person.displayName}`}
+                                />
+                                <span>{trait}</span>
+                              </label>
+                            </li>
                           ))}
                         </ul>
                       </section>
@@ -499,87 +481,50 @@ export function PersonDossier({ person, open, onClose }: Props) {
             </div>
           </section>
 
-          <section className="dossier-glance">
+          <section className="dossier-glance dossier-glance-profile">
             <div className="dossier-glance-intro">
               <span className="dossier-compass" aria-hidden="true">✦</span>
               <span>
                 <strong>At A Glance</strong>
-                <small>Key takeaways for a more complete view.</small>
+                <small>{balanceLabel(totalElevated, totalShadow)} · {totalElevated} elevated · {totalShadow} shadow</small>
               </span>
             </div>
 
-            <DossierGlanceColumn
-              icon={<Gem size={21} />}
-              title="Core Strengths"
-              items={coreStrengths}
-            />
-            <DossierGlanceColumn
-              icon={<AlertTriangle size={21} />}
-              title="Shadow Tendencies"
-              items={shadowTendencies}
-            />
-            <DossierGlanceColumn
-              icon={<MessageCircle size={21} />}
-              title="Communication Style"
-              items={communicationStyle}
-            />
-            <DossierGlanceColumn
-              icon={<BarChart3 size={21} />}
-              title="Primary Motivations"
-              items={primaryMotivations}
-            />
+            <div className="dossier-glance-matrix">
+              {perspectives.map((perspective) => {
+                const selected = selectionFor(perspective.id);
+                return (
+                  <div className="dossier-glance-row" key={`glance-${perspective.id}`}>
+                    <strong>{perspective.title}</strong>
+                    <span className="glance-elevated">
+                      <b>Elevated:</b> {selected.elevated.length ? selected.elevated.join(", ") : "None checked yet"}
+                    </span>
+                    <span className="glance-shadow">
+                      <b>Shadow:</b> {selected.shadow.length ? selected.shadow.join(", ") : "None checked yet"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </section>
 
           <footer className="dossier-footer">
             <div className="dossier-footer-brand">
-              <span className="dossier-brand-mark compact" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </span>
-              <span>
-                <strong>Lettrology™</strong>
-                <small>People • Patterns • Purpose</small>
-              </span>
+              <span className="dossier-brand-mark compact" aria-hidden="true"><span /><span /><span /></span>
+              <span><strong>Lettrology™</strong><small>People • Patterns • Purpose</small></span>
             </div>
             <p>“Understanding people creates a brighter tomorrow.”</p>
             <div className="dossier-footer-actions">
               <button type="button" className="dossier-print" onClick={() => window.print()}>
-                <Printer size={17} />
-                Export / Print Report
+                <Printer size={17} />Export / Print Report
               </button>
               <button type="button" className="dossier-close-button" onClick={onClose}>
-                <X size={17} />
-                Close
+                <X size={17} />Close
               </button>
             </div>
           </footer>
         </article>
       </div>
-    </div>
-  );
-}
-
-function DossierGlanceColumn({
-  icon,
-  title,
-  items,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  items: string[];
-}) {
-  return (
-    <div className="dossier-glance-column">
-      <h3>
-        {icon}
-        {title}
-      </h3>
-      <ul>
-        {items.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
     </div>
   );
 }
