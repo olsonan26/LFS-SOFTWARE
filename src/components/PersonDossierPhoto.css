@@ -1,0 +1,192 @@
+.dossier-photo-upload-target {
+  position: relative;
+  width: 100%;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  transition:
+    box-shadow 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.dossier-photo-upload-target:focus-visible {
+  outline: 2px solid rgba(166, 123, 47, 0.8);
+  outline-offset: 3px;
+}
+
+.dossier-photo-upload-target.drag-active {
+  border-color: #a67b2f;
+  box-shadow:
+    inset 0 0 0 3px rgba(166, 123, 47, 0.28),
+    0 0 0 2px rgba(166, 123, 47, 0.12);
+  transform: scale(1.008);
+}
+
+.dossier-photo-upload-target.is-busy {
+  cursor: progress;
+}
+
+.dossier-photo-upload-target img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+.dossier-photo-placeholder {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  padding: 15px;
+  color: #263343;
+  text-align: center;
+}
+
+.dossier-photo-placeholder strong {
+  color: #1c3559;
+  font-family: "Cinzel", serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dossier-photo-placeholder small {
+  max-width: 145px;
+  color: #4c607d;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.dossier-photo-upload-overlay {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  padding: 28px 10px 9px;
+  background: linear-gradient(
+    to top,
+    rgba(15, 35, 62, 0.88) 0%,
+    rgba(15, 35, 62, 0.62) 50%,
+    rgba(15, 35, 62, 0) 100%
+  );
+  color: #fff;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+  pointer-events: none;
+  text-align: left;
+}
+
+.dossier-photo-upload-overlay strong {
+  font-family: "Cinzel", serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.dossier-photo-upload-overlay small {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.dossier-photo-upload-target:hover .dossier-photo-upload-overlay,
+.dossier-photo-upload-target:focus-visible .dossier-photo-upload-overlay,
+.dossier-photo-upload-target.drag-active .dossier-photo-upload-overlay,
+.dossier-photo-upload-target.is-busy .dossier-photo-upload-overlay {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.dossier-photo-input {
+  display: none !important;
+}
+
+.dossier-photo-error {
+  display: block;
+  margin: 7px 2px -2px;
+  color: #923b34;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+}
+
+@media (hover: none) {
+  .dossier-photo-upload-target:has(img) .dossier-photo-upload-overlay {
+    opacity: 1;
+    transform: translateY(0);
+    padding-top: 20px;
+    background: linear-gradient(
+      to top,
+      rgba(15, 35, 62, 0.72) 0%,
+      rgba(15, 35, 62, 0) 100%
+    );
+  }
+}
+
+@media (max-width: 640px) {
+  .dossier-photo-placeholder strong {
+    font-size: 12px;
+  }
+
+  .dossier-photo-placeholder small {
+    font-size: 11px;
+  }
+
+  .dossier-photo-upload-overlay strong {
+    font-size: 11px;
+  }
+
+  .dossier-photo-upload-overlay small,
+  .dossier-photo-error {
+    font-size: 10px;
+  }
+}
+
+@media print {
+  .dossier-photo-upload-target {
+    width: 100% !important;
+    padding: 0 !important;
+    cursor: default !important;
+    border: 1px solid rgba(36, 50, 75, 0.13) !important;
+    box-shadow: none !important;
+    transform: none !important;
+    background: #ffffff !important;
+  }
+
+  .dossier-photo-upload-target img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center center !important;
+    filter: saturate(0.72) contrast(0.96) !important;
+  }
+
+  .dossier-photo-placeholder {
+    padding: 0 !important;
+  }
+
+  .dossier-photo-placeholder strong,
+  .dossier-photo-placeholder small,
+  .dossier-photo-upload-overlay,
+  .dossier-photo-input,
+  .dossier-photo-error {
+    display: none !important;
+  }
+}
