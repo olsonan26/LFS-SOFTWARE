@@ -1,0 +1,22 @@
+/*
+ * The dossier intro should point the reader to the six perspectives below,
+ * rather than summarizing or pre-judging the person in the header area.
+ */
+.dossier-summary-row > p {
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+
+.dossier-summary-row > p::after {
+  content: "Below is a clear overview of who this person is through the six core Lettrology perspectives. Read the sections below for the full breakdown.";
+  display: block;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+@media print {
+  .dossier-summary-row > p::after {
+    font-size: 8.2pt;
+    line-height: 1.3;
+  }
+}
