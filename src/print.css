@@ -1,0 +1,37 @@
+/* Shared print policy: white paper for every printable view while preserving useful accent colors. */
+@media print {
+  html,
+  body,
+  #root,
+  .app-shell,
+  .main-workspace,
+  .legacy-view,
+  .person-dossier-paper,
+  .profile-report-paper {
+    background: #ffffff !important;
+  }
+
+  /* Large neutral panels should not consume ink. Semantic red/green/gold accents remain. */
+  .person-dossier-paper,
+  .dossier-photo-card,
+  .dossier-metadata,
+  .dossier-core-card,
+  .dossier-core-card > header,
+  .dossier-glance,
+  .dossier-glance-profile,
+  .dossier-glance-matrix,
+  .dossier-glance-row,
+  .profile-report-executive,
+  .profile-report-analyst-summary,
+  .profile-report-limitations {
+    background: #ffffff !important;
+  }
+
+  /* Keep print colors exact for meaningful accents such as red/green/gold markers. */
+  .person-dossier-paper,
+  .profile-report-paper,
+  .legacy-view {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
