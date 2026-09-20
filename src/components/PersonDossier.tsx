@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   CalendarDays,
@@ -34,6 +34,7 @@ import { generateProfileReport } from "../data/profileReportClient";
 import { PersonProfileReportModal } from "./PersonProfileReportModal";
 import { useDialogFocus } from "./useDialogFocus";
 import "./PersonDossier.css";
+import "./PersonDossierPhoto.css";
 import "./PersonProfileReport.css";
 
 interface Props {
@@ -69,12 +70,54 @@ const DEFAULT_REPORT_ASSESSMENT: DossierReportAssessment = {
   updatedAt: "",
 };
 
+const MAX_PORTRAIT_FILE_SIZE = 15 * 1024 * 1024;
+const MAX_PORTRAIT_EDGE = 640;
+const PORTRAIT_JPEG_QUALITY = 0.82;
+
 function assessmentLabel(value: number) {
   if (value <= 2) return "Strongly constructive";
   if (value <= 4) return "Constructive tilt";
   if (value === 5) return "Balanced";
   if (value <= 7) return "Cautionary tilt";
   return "Strongly cautionary";
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Unable to read the selected image."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadHtmlImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("This image format could not be opened by the browser."));
+    image.src = src;
+  });
+}
+
+async function normalizePortraitImage(file: File): Promise<string> {
+  const source = await readFileAsDataUrl(file);
+  const image = await loadHtmlImage(source);
+  const longestSide = Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height);
+  const scale = longestSide > MAX_PORTRAIT_EDGE ? MAX_PORTRAIT_EDGE / longestSide : 1;
+  const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+  const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) return source;
+
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, width, height);
+  context.drawImage(image, 0, 0, width, height);
+  return canvas.toDataURL("image/jpeg", PORTRAIT_JPEG_QUALITY);
 }
 
 function parseDob(dob: string) {
@@ -185,6 +228,10 @@ export function PersonDossier({
 }: Props) {
   const [reportOpen, setReportOpen] = useState(false);
   const dialogRef = useDialogFocus(open && !reportOpen, onClose);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const [photoDragActive, setPhotoDragActive] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState("");
   const [interpretationRegistry, setInterpretationRegistry] =
     useState<DossierInterpretationRegistry>({});
   const [interpretationStatus, setInterpretationStatus] =
@@ -213,6 +260,12 @@ export function PersonDossier({
       cancelled = true;
     };
   }, [open]);
+
+  useEffect(() => {
+    setPhotoDragActive(false);
+    setPhotoBusy(false);
+    setPhotoError("");
+  }, [person.personId, open]);
 
   const fixed = useMemo(
     () =>
@@ -305,6 +358,56 @@ export function PersonDossier({
       },
     });
     setReportError("");
+  };
+
+  const openPhotoPicker = () => {
+    if (!photoBusy) photoInputRef.current?.click();
+  };
+
+  const savePortrait = async (file: File) => {
+    if (photoBusy) return;
+    setPhotoError("");
+
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("Please choose an image file.");
+      return;
+    }
+    if (file.size > MAX_PORTRAIT_FILE_SIZE) {
+      setPhotoError("Please choose an image smaller than 15 MB.");
+      return;
+    }
+
+    setPhotoBusy(true);
+    try {
+      const photoUrl = await normalizePortraitImage(file);
+      onUpdatePerson({
+        ...person,
+        photoUrl,
+      });
+    } catch (error) {
+      setPhotoError(
+        error instanceof Error ? error.message : "Unable to prepare this portrait.",
+      );
+    } finally {
+      setPhotoBusy(false);
+      setPhotoDragActive(false);
+    }
+  };
+
+  const handlePhotoInputChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (file) await savePortrait(file);
+    event.target.value = "";
+  };
+
+  const handlePhotoDrop = async (event: React.DragEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setPhotoDragActive(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) await savePortrait(file);
   };
 
   const toggleTrait = (
@@ -516,13 +619,61 @@ export function PersonDossier({
           <section className="dossier-identity">
             <div className="dossier-photo-card">
               <span className="dossier-paperclip" aria-hidden="true" />
-              <div className="dossier-photo">
+              <button
+                type="button"
+                className={`dossier-photo dossier-photo-upload-target${photoDragActive ? " drag-active" : ""}${photoBusy ? " is-busy" : ""}`}
+                onClick={openPhotoPicker}
+                onDragEnter={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  if (!photoBusy) setPhotoDragActive(true);
+                }}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  if (!photoBusy) setPhotoDragActive(true);
+                }}
+                onDragLeave={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  const nextTarget = event.relatedTarget as Node | null;
+                  if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
+                    setPhotoDragActive(false);
+                  }
+                }}
+                onDrop={handlePhotoDrop}
+                aria-label={
+                  person.photoUrl
+                    ? `Replace portrait for ${person.displayName}`
+                    : `Upload portrait for ${person.displayName}`
+                }
+              >
                 {person.photoUrl ? (
                   <img src={person.photoUrl} alt={`Portrait of ${person.displayName}`} />
                 ) : (
-                  <UserRound size={88} strokeWidth={1.2} aria-hidden="true" />
+                  <span className="dossier-photo-placeholder">
+                    <UserRound size={88} strokeWidth={1.2} aria-hidden="true" />
+                    <strong>Upload portrait</strong>
+                    <small>Click here or drag & drop an image</small>
+                  </span>
                 )}
-              </div>
+                <span className="dossier-photo-upload-overlay no-print" aria-hidden="true">
+                  <strong>{photoBusy ? "Preparing photo…" : person.photoUrl ? "Replace photo" : "Upload photo"}</strong>
+                  <small>{photoBusy ? "Please wait" : "Click or drop an image here"}</small>
+                </span>
+              </button>
+              <input
+                ref={photoInputRef}
+                className="dossier-photo-input no-print"
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoInputChange}
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+              {photoError && (
+                <small className="dossier-photo-error no-print">{photoError}</small>
+              )}
               <p>“{descriptor}”</p>
             </div>
 
