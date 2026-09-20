@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   BarChart3,
@@ -19,8 +19,10 @@ import {
 } from "../core/lettrology-engine/compoundTrail";
 import {
   getDossierInterpretation,
+  loadDossierInterpretationRegistry,
   type CorePerspectiveId,
   type DossierInterpretation,
+  type DossierInterpretationRegistry,
 } from "../data/personDossierInterpretations";
 import { useDialogFocus } from "./useDialogFocus";
 import "./PersonDossier.css";
@@ -40,13 +42,16 @@ interface PerspectiveDefinition {
   interpretation?: DossierInterpretation;
 }
 
+type InterpretationStatus = "idle" | "loading" | "ready" | "error";
+
 function parseDob(dob: string) {
-  const segments = dob.split("-").map((part) => Number.parseInt(part, 10));
+  const normalized = dob.replace(/\s(?:BC|BCE|AD|CE)$/i, "");
+  const segments = normalized.split("-").map((part) => Number.parseInt(part, 10));
   if (segments.length !== 3 || segments.some((part) => Number.isNaN(part))) {
     return null;
   }
 
-  if (dob.split("-")[0]?.length === 4) {
+  if (normalized.split("-")[0]?.length === 4) {
     return { year: segments[0], month: segments[1], day: segments[2] };
   }
 
@@ -54,6 +59,15 @@ function parseDob(dob: string) {
 }
 
 function formatBirthDate(dob: string) {
+  if (/\s(?:BC|BCE)$/i.test(dob)) {
+    const parts = parseDob(dob);
+    if (!parts) return dob;
+    const month = new Intl.DateTimeFormat("en-US", { month: "long" }).format(
+      new Date(2000, parts.month - 1, 1),
+    );
+    return `${month} ${parts.day}, ${parts.year} BC`;
+  }
+
   const parts = parseDob(dob);
   if (!parts) return dob;
   const date = new Date(parts.year, parts.month - 1, parts.day);
@@ -66,7 +80,9 @@ function formatBirthDate(dob: string) {
 }
 
 function calculateAge(person: PersonRecord) {
-  if (person.datePrecision !== "EXACT") return undefined;
+  if (person.datePrecision !== "EXACT" || /\s(?:BC|BCE)$/i.test(person.dob)) {
+    return undefined;
+  }
   const parts = parseDob(person.dob);
   if (!parts) return undefined;
 
@@ -93,7 +109,7 @@ function fallbackTraits(value: CompoundValue, mode: "elevated" | "shadow") {
   if (mode === "elevated") {
     return {
       summary:
-        "Canonical elevated wording has not yet been loaded for this position.",
+        "Approved elevated wording could not be loaded for this position.",
       traits: unique([
         `Calculation ${calculation}`,
         `Root value ${value.root}`,
@@ -104,23 +120,49 @@ function fallbackTraits(value: CompoundValue, mode: "elevated" | "shadow") {
   }
 
   return {
-    summary: "Canonical shadow wording has not yet been loaded for this position.",
+    summary: "Approved shadow wording could not be loaded for this position.",
     traits: unique([
       `Calculation ${calculation}`,
-      "Shadow interpretation pending methodology approval",
+      "Shadow interpretation unavailable",
       "No diagnostic inference generated",
-      "Review the canonical interpretation library",
+      "Review the interpretation library",
     ]),
   };
 }
 
 function listOrPending(items: string[]) {
   const values = unique(items, 5);
-  return values.length ? values : ["Canonical interpretation pending"];
+  return values.length ? values : ["Interpretation unavailable"];
 }
 
 export function PersonDossier({ person, open, onClose }: Props) {
   const dialogRef = useDialogFocus(open, onClose);
+  const [interpretationRegistry, setInterpretationRegistry] =
+    useState<DossierInterpretationRegistry>({});
+  const [interpretationStatus, setInterpretationStatus] =
+    useState<InterpretationStatus>("idle");
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setInterpretationStatus("loading");
+
+    loadDossierInterpretationRegistry()
+      .then((registry) => {
+        if (cancelled) return;
+        setInterpretationRegistry(registry);
+        setInterpretationStatus("ready");
+      })
+      .catch((error) => {
+        console.error("Unable to load Person Dossier interpretations", error);
+        if (!cancelled) setInterpretationStatus("error");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
   const fixed = useMemo(
     () =>
       calculatePrimaryProfile(
@@ -179,9 +221,13 @@ export function PersonDossier({ person, open, onClose }: Props) {
 
     return definitions.map((definition) => ({
       ...definition,
-      interpretation: getDossierInterpretation(definition.id, definition.value),
+      interpretation: getDossierInterpretation(
+        definition.id,
+        definition.value,
+        interpretationRegistry,
+      ),
     }));
-  }, [fixed]);
+  }, [fixed, interpretationRegistry]);
 
   const age = calculateAge(person);
   const generated = new Intl.DateTimeFormat("en-US", {
@@ -203,12 +249,22 @@ export function PersonDossier({ person, open, onClose }: Props) {
 
     if (loadedCount === perspectives.length && elevated.length) {
       const elevatedText = elevated.join(", ");
-      const shadowText = shadow.length ? ` Under pressure, the corresponding shadow expressions include ${shadow.join(", ")}.` : "";
+      const shadowText = shadow.length
+        ? ` Under pressure, the corresponding shadow expressions include ${shadow.join(", ")}.`
+        : "";
       return `${person.displayName}’s six core Lettrology perspectives emphasize ${elevatedText}.${shadowText}`;
     }
 
-    return `This dossier assembles ${person.displayName}’s six fixed Lettrology calculations from the recorded birth name and birth date. ${loadedCount} of ${perspectives.length} canonical narrative interpretations are currently loaded; positions without approved wording remain calculation-only rather than generating unsupported personality claims.`;
-  }, [loadedCount, person.displayName, perspectives]);
+    if (interpretationStatus === "loading") {
+      return `This dossier assembles ${person.displayName}’s six fixed Lettrology calculations. The approved interpretation library is loading from Supabase.`;
+    }
+
+    if (interpretationStatus === "error") {
+      return `This dossier assembles ${person.displayName}’s six fixed Lettrology calculations. The interpretation database is temporarily unavailable, so calculation-only fallbacks are being shown.`;
+    }
+
+    return `This dossier assembles ${person.displayName}’s six fixed Lettrology calculations from the recorded birth name and birth date.`;
+  }, [interpretationStatus, loadedCount, person.displayName, perspectives]);
 
   const coreStrengths = listOrPending(
     perspectives.flatMap((item) => item.interpretation?.elevated.traits || []),
@@ -216,12 +272,34 @@ export function PersonDossier({ person, open, onClose }: Props) {
   const shadowTendencies = listOrPending(
     perspectives.flatMap((item) => item.interpretation?.shadow.traits || []),
   );
+
+  const explicitCommunication = perspectives.flatMap(
+    (item) => item.interpretation?.communication || [],
+  );
   const communicationStyle = listOrPending(
-    perspectives.flatMap((item) => item.interpretation?.communication || []),
+    explicitCommunication.length
+      ? explicitCommunication
+      : perspectives
+          .filter(
+            (item) =>
+              item.id === "initialImpressions" || item.id === "personality",
+          )
+          .flatMap((item) => item.interpretation?.elevated.traits || []),
+  );
+
+  const explicitMotivations = perspectives.flatMap(
+    (item) => item.interpretation?.motivations || [],
   );
   const primaryMotivations = listOrPending(
-    perspectives.flatMap((item) => item.interpretation?.motivations || []),
+    explicitMotivations.length
+      ? explicitMotivations
+      : perspectives
+          .filter(
+            (item) => item.id === "heartDesire" || item.id === "ultimateGoal",
+          )
+          .flatMap((item) => item.interpretation?.elevated.traits || []),
   );
+
   const descriptor =
     perspectives.find((item) => item.interpretation?.descriptor)?.interpretation
       ?.descriptor || "Six fixed patterns. One verified profile.";
