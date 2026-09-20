@@ -119,6 +119,17 @@ function validPerspective(item: any) {
   );
 }
 
+function normalizeAssessment(raw: any) {
+  const numericScale = Number(raw?.toneScale ?? 5);
+  if (!Number.isFinite(numericScale) || numericScale < 0 || numericScale > 10) {
+    return null;
+  }
+  return {
+    toneScale: Math.round(numericScale),
+    notes: typeof raw?.notes === "string" ? raw.notes.trim().slice(0, 4000) : "",
+  };
+}
+
 async function fingerprintFor(req: Request, salt: string) {
   const forwarded = req.headers.get("x-forwarded-for") || "";
   const ip =
@@ -194,6 +205,7 @@ Deno.serve(async (req: Request) => {
     const displayName = body?.person?.displayName;
     const roleInCase = body?.person?.roleInCase;
     const perspectives = body?.perspectives;
+    const assessment = normalizeAssessment(body?.assessment);
 
     if (
       typeof displayName !== "string" ||
@@ -201,7 +213,8 @@ Deno.serve(async (req: Request) => {
       typeof roleInCase !== "string" ||
       !Array.isArray(perspectives) ||
       perspectives.length !== 6 ||
-      !perspectives.every(validPerspective)
+      !perspectives.every(validPerspective) ||
+      !assessment
     ) {
       return json(req, { error: "The report input is incomplete or invalid." }, 400);
     }
@@ -219,6 +232,7 @@ Deno.serve(async (req: Request) => {
         displayName: displayName.trim().slice(0, 200),
         roleInCase: roleInCase.slice(0, 80),
       },
+      assessment,
       perspectives: perspectives.map((item: any) => ({
         id: item.id.slice(0, 80),
         title: item.title.slice(0, 120),
@@ -242,7 +256,7 @@ Deno.serve(async (req: Request) => {
           {
             role: "user",
             content:
-              "Write the integrated profile report from this reviewed selection data. Use only checked traits.\n\n" +
+              "Write the integrated profile report from this reviewed selection data. The analyst assessment is high-priority framing guidance: preserve its meaning, improve its writing, and let the 0–10 scale materially affect emphasis and word choice without inventing facts or traits. Use only checked traits plus the supplied analyst framing.\n\n" +
               JSON.stringify(safePayload, null, 2),
           },
         ],
