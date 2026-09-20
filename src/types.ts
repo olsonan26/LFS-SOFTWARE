@@ -69,11 +69,33 @@ export interface DossierTraitSelection {
   shadow: string[];
   updatedAt: string;
   updatedBy?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
 }
 
 export type DossierTraitSelections = Partial<
   Record<DossierPerspectiveId, DossierTraitSelection>
 >;
+
+export interface DossierReportSection {
+  heading: string;
+  paragraphs: string[];
+}
+
+export interface DossierProfileReport {
+  reportId: string;
+  title: string;
+  executiveSummary: string;
+  sections: DossierReportSection[];
+  analystSummary: string[];
+  limitations: string;
+  model: string;
+  skillVersion: string;
+  generatedAt: string;
+  generatedBy?: string;
+  sourceSelections: DossierTraitSelections;
+  sourceCalculations: Partial<Record<DossierPerspectiveId, string>>;
+}
 
 export interface PersonRecord {
   personId: string;
@@ -95,6 +117,7 @@ export interface PersonRecord {
   birthLocation?: string;
   notes?: string;
   dossierTraitSelections?: DossierTraitSelections;
+  dossierProfileReports?: DossierProfileReport[];
   identities: IdentityRecord[];
 }
 

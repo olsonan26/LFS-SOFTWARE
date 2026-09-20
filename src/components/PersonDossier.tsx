@@ -2,14 +2,18 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CalendarDays,
+  FileText,
   Leaf,
+  LoaderCircle,
   MapPin,
   Printer,
+  Sparkles,
   UserRound,
   X,
 } from "lucide-react";
 import type {
   DossierPerspectiveId,
+  DossierProfileReport,
   DossierTraitSelection,
   PersonRecord,
 } from "../types";
@@ -25,8 +29,11 @@ import {
   type DossierInterpretation,
   type DossierInterpretationRegistry,
 } from "../data/personDossierInterpretations";
+import { generateProfileReport } from "../data/profileReportClient";
+import { PersonProfileReportModal } from "./PersonProfileReportModal";
 import { useDialogFocus } from "./useDialogFocus";
 import "./PersonDossier.css";
+import "./PersonProfileReport.css";
 
 interface Props {
   person: PersonRecord;
@@ -47,6 +54,7 @@ interface PerspectiveDefinition {
 
 type InterpretationStatus = "idle" | "loading" | "ready" | "error";
 type ExpressionMode = "elevated" | "shadow";
+type ReportStatus = "idle" | "generating";
 
 const EMPTY_SELECTION: DossierTraitSelection = {
   elevated: [],
@@ -146,6 +154,13 @@ function balanceLabel(elevated: number, shadow: number) {
   return "Mixed / balanced traits checked";
 }
 
+function createReportId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `report-${Date.now()}`;
+}
+
 export function PersonDossier({
   person,
   open,
@@ -153,11 +168,15 @@ export function PersonDossier({
   onUpdatePerson,
   editorName,
 }: Props) {
-  const dialogRef = useDialogFocus(open, onClose);
+  const [reportOpen, setReportOpen] = useState(false);
+  const dialogRef = useDialogFocus(open && !reportOpen, onClose);
   const [interpretationRegistry, setInterpretationRegistry] =
     useState<DossierInterpretationRegistry>({});
   const [interpretationStatus, setInterpretationStatus] =
     useState<InterpretationStatus>("idle");
+  const [reportStatus, setReportStatus] = useState<ReportStatus>("idle");
+  const [reportError, setReportError] = useState("");
+  const [activeReport, setActiveReport] = useState<DossierProfileReport | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -273,6 +292,8 @@ export function PersonDossier({
       [mode]: nextList,
       updatedAt: new Date().toISOString(),
       updatedBy: editorName,
+      reviewedAt: undefined,
+      reviewedBy: undefined,
     };
 
     onUpdatePerson({
@@ -282,6 +303,30 @@ export function PersonDossier({
         [id]: nextSelection,
       },
     });
+    setReportError("");
+  };
+
+  const toggleReviewed = (perspectiveId: CorePerspectiveId) => {
+    const id = perspectiveId as DossierPerspectiveId;
+    const current = person.dossierTraitSelections?.[id] || EMPTY_SELECTION;
+    const isReviewed = Boolean(current.reviewedAt);
+    const now = new Date().toISOString();
+    const nextSelection: DossierTraitSelection = {
+      ...current,
+      updatedAt: now,
+      updatedBy: editorName,
+      reviewedAt: isReviewed ? undefined : now,
+      reviewedBy: isReviewed ? undefined : editorName,
+    };
+
+    onUpdatePerson({
+      ...person,
+      dossierTraitSelections: {
+        ...(person.dossierTraitSelections || {}),
+        [id]: nextSelection,
+      },
+    });
+    setReportError("");
   };
 
   const totalElevated = perspectives.reduce(
@@ -292,12 +337,81 @@ export function PersonDossier({
     (sum, item) => sum + selectionFor(item.id).shadow.length,
     0,
   );
+  const reviewedCount = perspectives.filter((item) =>
+    Boolean(selectionFor(item.id).reviewedAt),
+  ).length;
+  const allReviewed = reviewedCount === perspectives.length;
+
+  const reports = person.dossierProfileReports || [];
+  const latestReport = reports.length ? reports[reports.length - 1] : null;
 
   const descriptor =
     perspectives.find((item) => item.interpretation?.descriptor)?.interpretation
       ?.descriptor || "Six fixed patterns. One verified profile.";
 
   const summary = `Below is a good overview of who ${person.displayName} is through the six core Lettrology perspectives. Read below for the full breakdown.`;
+
+  const handleGenerateReport = async () => {
+    if (!allReviewed || reportStatus === "generating") return;
+    setReportStatus("generating");
+    setReportError("");
+
+    try {
+      const sourceCalculations: Partial<Record<DossierPerspectiveId, string>> = {};
+      const reportPerspectives = perspectives.map((perspective) => {
+        const id = perspective.id as DossierPerspectiveId;
+        const selected = selectionFor(perspective.id);
+        const calculation = formatCompound(perspective.value);
+        sourceCalculations[id] = calculation;
+        return {
+          id,
+          title: perspective.title,
+          source: perspective.source,
+          calculation,
+          elevated: [...selected.elevated],
+          shadow: [...selected.shadow],
+        };
+      });
+
+      const draft = await generateProfileReport({
+        person: {
+          displayName: person.displayName,
+          roleInCase: person.roleInCase,
+        },
+        perspectives: reportPerspectives,
+      });
+
+      const savedReport: DossierProfileReport = {
+        reportId: createReportId(),
+        title: draft.title,
+        executiveSummary: draft.executiveSummary,
+        sections: draft.sections,
+        analystSummary: draft.analystSummary,
+        limitations: draft.limitations,
+        model: draft.model,
+        skillVersion: draft.skillVersion,
+        generatedAt: new Date().toISOString(),
+        generatedBy: editorName,
+        sourceSelections: JSON.parse(
+          JSON.stringify(person.dossierTraitSelections || {}),
+        ),
+        sourceCalculations,
+      };
+
+      onUpdatePerson({
+        ...person,
+        dossierProfileReports: [...reports, savedReport],
+      });
+      setActiveReport(savedReport);
+      setReportOpen(true);
+    } catch (error) {
+      setReportError(
+        error instanceof Error ? error.message : "Unable to generate the profile report.",
+      );
+    } finally {
+      setReportStatus("idle");
+    }
+  };
 
   if (!open) return null;
 
@@ -411,7 +525,7 @@ export function PersonDossier({
               <div>
                 <h2>The Six Core Perspectives</h2>
                 <small className="dossier-check-instruction">
-                  Check the traits that actually fit this person. Every choice is saved to their profile.
+                  Check the traits that actually fit this person, then mark each section reviewed. Every choice is saved to their profile.
                 </small>
               </div>
               <p>One name. Many insights. A more complete you.</p>
@@ -475,6 +589,19 @@ export function PersonDossier({
                         </ul>
                       </section>
                     </div>
+
+                    <label className="dossier-review-check">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(selected.reviewedAt)}
+                        onChange={() => toggleReviewed(perspective.id)}
+                      />
+                      <span>
+                        {selected.reviewedAt
+                          ? "Section reviewed — ready for report"
+                          : "Done reviewing this section"}
+                      </span>
+                    </label>
                   </article>
                 );
               })}
@@ -497,14 +624,54 @@ export function PersonDossier({
                   <div className="dossier-glance-row" key={`glance-${perspective.id}`}>
                     <strong>{perspective.title}</strong>
                     <span className="glance-elevated">
-                      <b>Elevated:</b> {selected.elevated.length ? selected.elevated.join(", ") : "None checked yet"}
+                      <b>Elevated:</b> {selected.elevated.length ? selected.elevated.join(", ") : "None checked"}
                     </span>
                     <span className="glance-shadow">
-                      <b>Shadow:</b> {selected.shadow.length ? selected.shadow.join(", ") : "None checked yet"}
+                      <b>Shadow:</b> {selected.shadow.length ? selected.shadow.join(", ") : "None checked"}
                     </span>
                   </div>
                 );
               })}
+            </div>
+          </section>
+
+          <section className="dossier-report-tools no-print" aria-label="Profile report generator">
+            <div className="dossier-report-tools-copy">
+              <strong>Integrated Profile Report</strong>
+              <small>
+                {allReviewed
+                  ? "All six sections are reviewed. The report will use only the traits you checked."
+                  : `${reviewedCount} of 6 sections reviewed. Finish reviewing all six before generating the report.`}
+              </small>
+              {reportError && <small className="dossier-report-error">{reportError}</small>}
+            </div>
+            <div className="dossier-report-actions">
+              {latestReport && (
+                <button
+                  type="button"
+                  className="dossier-report-view"
+                  onClick={() => {
+                    setActiveReport(latestReport);
+                    setReportOpen(true);
+                  }}
+                >
+                  <FileText size={15} />
+                  View Latest Report
+                </button>
+              )}
+              <button
+                type="button"
+                className="dossier-report-generate"
+                disabled={!allReviewed || reportStatus === "generating"}
+                onClick={handleGenerateReport}
+              >
+                {reportStatus === "generating" ? (
+                  <LoaderCircle size={15} className="spin" />
+                ) : (
+                  <Sparkles size={15} />
+                )}
+                {latestReport ? "Generate Updated Report" : "Generate Profile Report"}
+              </button>
             </div>
           </section>
 
@@ -525,6 +692,13 @@ export function PersonDossier({
           </footer>
         </article>
       </div>
+
+      <PersonProfileReportModal
+        open={reportOpen}
+        personName={person.displayName}
+        report={activeReport}
+        onClose={() => setReportOpen(false)}
+      />
     </div>
   );
 }
