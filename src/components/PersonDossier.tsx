@@ -14,6 +14,7 @@ import {
 import type {
   DossierPerspectiveId,
   DossierProfileReport,
+  DossierReportAssessment,
   DossierTraitSelection,
   PersonRecord,
 } from "../types";
@@ -61,6 +62,20 @@ const EMPTY_SELECTION: DossierTraitSelection = {
   shadow: [],
   updatedAt: "",
 };
+
+const DEFAULT_REPORT_ASSESSMENT: DossierReportAssessment = {
+  toneScale: 5,
+  notes: "",
+  updatedAt: "",
+};
+
+function assessmentLabel(value: number) {
+  if (value <= 2) return "Strongly constructive";
+  if (value <= 4) return "Constructive tilt";
+  if (value === 5) return "Balanced";
+  if (value <= 7) return "Cautionary tilt";
+  return "Strongly cautionary";
+}
 
 function parseDob(dob: string) {
   const normalized = dob.replace(/\s(?:BC|BCE|AD|CE)$/i, "");
@@ -275,6 +290,23 @@ export function PersonDossier({
   const selectionFor = (id: CorePerspectiveId) =>
     person.dossierTraitSelections?.[id as DossierPerspectiveId] || EMPTY_SELECTION;
 
+  const reportAssessment = person.dossierReportAssessment || DEFAULT_REPORT_ASSESSMENT;
+
+  const updateReportAssessment = (
+    changes: Partial<Pick<DossierReportAssessment, "toneScale" | "notes">>,
+  ) => {
+    onUpdatePerson({
+      ...person,
+      dossierReportAssessment: {
+        ...reportAssessment,
+        ...changes,
+        updatedAt: new Date().toISOString(),
+        updatedBy: editorName,
+      },
+    });
+    setReportError("");
+  };
+
   const toggleTrait = (
     perspectiveId: CorePerspectiveId,
     mode: ExpressionMode,
@@ -373,12 +405,23 @@ export function PersonDossier({
         };
       });
 
+      const normalizedAssessment: DossierReportAssessment = {
+        toneScale: Math.max(0, Math.min(10, Math.round(reportAssessment.toneScale))),
+        notes: reportAssessment.notes.trim(),
+        updatedAt: reportAssessment.updatedAt || new Date().toISOString(),
+        updatedBy: reportAssessment.updatedBy || editorName,
+      };
+
       const draft = await generateProfileReport({
         person: {
           displayName: person.displayName,
           roleInCase: person.roleInCase,
         },
         perspectives: reportPerspectives,
+        assessment: {
+          toneScale: normalizedAssessment.toneScale,
+          notes: normalizedAssessment.notes,
+        },
       });
 
       const savedReport: DossierProfileReport = {
@@ -396,10 +439,12 @@ export function PersonDossier({
           JSON.stringify(person.dossierTraitSelections || {}),
         ),
         sourceCalculations,
+        sourceAssessment: normalizedAssessment,
       };
 
       onUpdatePerson({
         ...person,
+        dossierReportAssessment: normalizedAssessment,
         dossierProfileReports: [...reports, savedReport],
       });
       setActiveReport(savedReport);
@@ -636,11 +681,49 @@ export function PersonDossier({
           </section>
 
           <section className="dossier-report-tools no-print" aria-label="Profile report generator">
+            <div className="dossier-case-assessment">
+              <div className="dossier-assessment-heading">
+                <strong>How would you assess this case?</strong>
+                <span className="dossier-assessment-badge">
+                  {reportAssessment.toneScale}/10 · {assessmentLabel(reportAssessment.toneScale)}
+                </span>
+              </div>
+              <p className="dossier-assessment-explainer">
+                Set the overall framing before DeepSeek writes the report. Moving toward green makes the report more constructive and strength-focused; moving toward dark red makes it more critical and shadow-focused.
+              </p>
+              <div className="dossier-assessment-scale">
+                <span>0 · Green / more positive</span>
+                <input
+                  className="dossier-assessment-range"
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="1"
+                  value={reportAssessment.toneScale}
+                  onChange={(event) =>
+                    updateReportAssessment({ toneScale: Number(event.target.value) })
+                  }
+                  aria-label="Report framing scale from constructive green to cautionary dark red"
+                />
+                <span>10 · Dark red / more negative</span>
+              </div>
+              <textarea
+                value={reportAssessment.notes}
+                maxLength={4000}
+                onChange={(event) => updateReportAssessment({ notes: event.target.value })}
+                placeholder="Write your assessment in your own words. What stands out to you about this person or case? What concerns you? What feels positive? DeepSeek will preserve your meaning and rewrite it professionally."
+                aria-label="Analyst assessment notes for the generated profile report"
+              />
+              <small className="dossier-assessment-note">
+                Your assessment is saved with this person and given strong framing weight in the generated report. It changes emphasis and wording, but does not create new checked traits or turn opinion into evidence.
+              </small>
+            </div>
+
             <div className="dossier-report-tools-copy">
               <strong>Integrated Profile Report</strong>
               <small>
                 {allReviewed
-                  ? "All six sections are reviewed. The report will use only the traits you checked."
+                  ? "All six sections are reviewed. The report will use the checked traits plus your saved assessment above."
                   : `${reviewedCount} of 6 sections reviewed. Finish reviewing all six before generating the report.`}
               </small>
               {reportError && <small className="dossier-report-error">{reportError}</small>}

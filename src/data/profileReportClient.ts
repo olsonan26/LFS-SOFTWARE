@@ -28,6 +28,10 @@ export interface ProfileReportGenerationInput {
     roleInCase: string;
   };
   perspectives: ProfileReportPerspectiveInput[];
+  assessment: {
+    toneScale: number;
+    notes: string;
+  };
 }
 
 export interface ProfileReportGenerationResult {
