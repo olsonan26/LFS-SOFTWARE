@@ -168,14 +168,14 @@ export function PersonDossier({
   onUpdatePerson,
   editorName,
 }: Props) {
-  const dialogRef = useDialogFocus(open, onClose);
+  const [reportOpen, setReportOpen] = useState(false);
+  const dialogRef = useDialogFocus(open && !reportOpen, onClose);
   const [interpretationRegistry, setInterpretationRegistry] =
     useState<DossierInterpretationRegistry>({});
   const [interpretationStatus, setInterpretationStatus] =
     useState<InterpretationStatus>("idle");
   const [reportStatus, setReportStatus] = useState<ReportStatus>("idle");
   const [reportError, setReportError] = useState("");
-  const [reportOpen, setReportOpen] = useState(false);
   const [activeReport, setActiveReport] = useState<DossierProfileReport | null>(null);
 
   useEffect(() => {
