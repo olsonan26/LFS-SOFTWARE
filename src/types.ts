@@ -56,6 +56,25 @@ export interface IdentityRecord {
   notes?: string;
 }
 
+export type DossierPerspectiveId =
+  | 'initialImpressions'
+  | 'personality'
+  | 'heartDesire'
+  | 'habits'
+  | 'naturalSkills'
+  | 'ultimateGoal';
+
+export interface DossierTraitSelection {
+  elevated: string[];
+  shadow: string[];
+  updatedAt: string;
+  updatedBy?: string;
+}
+
+export type DossierTraitSelections = Partial<
+  Record<DossierPerspectiveId, DossierTraitSelection>
+>;
+
 export interface PersonRecord {
   personId: string;
   displayName: string;
@@ -75,6 +94,7 @@ export interface PersonRecord {
   occupation?: string;
   birthLocation?: string;
   notes?: string;
+  dossierTraitSelections?: DossierTraitSelections;
   identities: IdentityRecord[];
 }
 

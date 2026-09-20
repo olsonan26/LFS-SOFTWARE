@@ -37,6 +37,8 @@ interface Props {
   onOpenNewPersonModal: () => void;
   onOpenTimeline: () => void;
   onOpenEvidence: () => void;
+  onUpdatePerson: (person: PersonRecord) => void;
+  editorName?: string;
 }
 
 export function PeopleView(p: Props) {
@@ -460,6 +462,8 @@ export function PeopleView(p: Props) {
             person={person}
             open={dossierOpen}
             onClose={() => setDossierOpen(false)}
+            onUpdatePerson={p.onUpdatePerson}
+            editorName={p.editorName}
           />
         </>
       )}

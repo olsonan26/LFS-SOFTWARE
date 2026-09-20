@@ -44,6 +44,8 @@ export type NavTab =
   | "METHODOLOGY"
   | "BLIND";
 export type ReadingSize = "normal" | "large" | "xlarge";
+export type CloudStatus = "signed-out" | "connecting" | "synced" | "denied" | "error";
+
 export const PAGE_NAMES: Record<NavTab, string> = {
   HOME: "Investigation Hub",
   CASES: "Cases",
@@ -61,6 +63,7 @@ export const PAGE_NAMES: Record<NavTab, string> = {
   METHODOLOGY: "Methodology",
   BLIND: "Blind Study",
 };
+
 interface HeaderProps {
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
@@ -74,6 +77,9 @@ interface HeaderProps {
   onOpenNewPersonModal: () => void;
   onOpenNewEventModal: () => void;
   onOpenTutorial: () => void;
+  onOpenCloud: () => void;
+  cloudStatus: CloudStatus;
+  cloudEmail?: string;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   fontScale: ReadingSize;
@@ -81,6 +87,7 @@ interface HeaderProps {
   theme: "dark" | "light";
   onSetTheme: (theme: "dark" | "light") => void;
 }
+
 const mainItems: { id: NavTab; icon: typeof Home; label: string }[] = [
   { id: "HOME", icon: Home, label: "Home" },
   { id: "CASES", icon: FolderOpen, label: "Cases" },
@@ -100,6 +107,15 @@ const extraItems: { id: NavTab; icon: typeof Home }[] = [
   { id: "BLIND", icon: EyeOff },
   { id: "METHODOLOGY", icon: ShieldCheck },
 ];
+
+function cloudLabel(status: CloudStatus) {
+  if (status === "synced") return "Shared";
+  if (status === "connecting") return "Syncing";
+  if (status === "denied") return "Cloud access";
+  if (status === "error") return "Cloud error";
+  return "Cloud";
+}
+
 export function Header(p: HeaderProps) {
   const [menu, setMenu] = useState<"reading" | "add" | "user" | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -299,6 +315,15 @@ export function Header(p: HeaderProps) {
               </div>
             )}
           </div>
+          <button
+            className="quiet-button"
+            onClick={p.onOpenCloud}
+            aria-label={`Open shared workspace. ${cloudLabel(p.cloudStatus)}.`}
+            title={p.cloudEmail ? `${cloudLabel(p.cloudStatus)} · ${p.cloudEmail}` : "Connect shared LFS workspace"}
+          >
+            <Database size={19} />
+            <span>{cloudLabel(p.cloudStatus)}</span>
+          </button>
           <div className="popover-anchor">
             <button
               className="account-button"
